@@ -1,5 +1,5 @@
 use qrscanner_verification::{
-    AcceptanceFacts, MacOS26, MutationCounts, NextStep, NotaryState, VerificationFacts,
+    AcceptanceFacts, MacOS27, MutationCounts, NextStep, NotaryState, VerificationFacts,
     acceptance_complete, mutations_complete, next_step, verification_complete,
 };
 
@@ -33,14 +33,13 @@ fn verification_and_acceptance_require_every_fact() {
             mask == 31
         );
     }
-    for mask in 0_u8..8 {
+    for mask in 0_u8..4 {
         assert_eq!(
             acceptance_complete(AcceptanceFacts {
                 identities_match: mask & 1 != 0,
                 arm64_session: mask & 2 != 0,
-                x86_64_session: mask & 4 != 0,
             }),
-            mask == 7
+            mask == 3
         );
     }
 }
@@ -149,30 +148,37 @@ fn mutation_counts_require_complete_nonempty_outcomes_without_overflow() {
 
 #[test]
 fn os_versions_require_numeric_minor_and_optional_patch_components() {
-    for version in ["26.0", "26.1", "26.10.2", "26.1234567890.1234567890"] {
-        assert!(MacOS26::parse(version.as_bytes()).is_some());
-        if let Some(parsed) = MacOS26::parse(version.as_bytes()) {
+    for version in ["27.0", "27.1", "27.10.2", "27.1234567890.1234567890"] {
+        assert!(MacOS27::parse(version.as_bytes()).is_some());
+        if let Some(parsed) = MacOS27::parse(version.as_bytes()) {
             assert_eq!(parsed.as_bytes(), version.as_bytes());
-            assert_eq!(MacOS26::parse(parsed.as_bytes()), Some(parsed));
+            assert_eq!(MacOS27::parse(parsed.as_bytes()), Some(parsed));
         }
     }
     for version in [
-        "", "26", "26.", "26.1.", "26..1", "26.1.2.3", "26.1a", "26.0\n", "26.０", "27.0", "126.0",
-        "026.0",
+        "", "27", "27.", "27.1.", "27..1", "27.1.2.3", "27.1a", "27.0\n", "27.０", "26.0", "127.0",
+        "027.0",
     ] {
         assert!(
-            MacOS26::parse(version.as_bytes()).is_none(),
+            MacOS27::parse(version.as_bytes()).is_none(),
             "accepted {version:?}"
         );
     }
     for byte in 0..=u8::MAX {
         assert_eq!(
-            MacOS26::parse(&[b'2', b'6', b'.', byte]).is_some(),
+            MacOS27::parse(&[b'2', b'7', b'.', byte]).is_some(),
             byte.is_ascii_digit()
         );
         assert_eq!(
-            MacOS26::parse(&[b'2', b'6', b'.', b'0', b'.', byte]).is_some(),
+            MacOS27::parse(&[b'2', b'7', b'.', b'0', b'.', byte]).is_some(),
             byte.is_ascii_digit()
         );
     }
+}
+
+#[test]
+fn distribution_version_requires_macos27() {
+    assert!(MacOS27::parse(b"27.0.1").is_some());
+    assert!(MacOS27::parse(b"26.0").is_none());
+    assert!(MacOS27::parse(b"28.0").is_none());
 }

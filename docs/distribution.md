@@ -1,8 +1,7 @@
 # Distribution
 
-QRScanner uses Developer ID distribution with App Sandbox and a macOS 26 deployment target.
+QRScanner uses Developer ID distribution with App Sandbox and a macOS 27 deployment target on Apple silicon.
 Preparing a development app or running verification grants no authority to sign, notarize, or publish a product release.
-The current implementation work prepares source and development artifacts only.
 
 Run the complete automated gate before an authorized signing operation.
 
@@ -26,19 +25,19 @@ The app doesn't link the fuzz runtime.
 
 ## Native acceptance
 
-Signed distribution also requires `build/evidence/macos26-acceptance.json` from normal login sessions on macOS 26.
+Signed distribution also requires `build/evidence/macos27-acceptance.json` from a normal login session on macOS 27 arm64.
 The record contains `source_sha256`, `binary_sha256`, and `sessions`.
 Each session identifies `os_version`, `os_build`, `architecture`, `hardware`, and a `checks` object with Boolean results.
-Both `arm64` and `x86_64` need a macOS 26 session with every required interaction passing.
+An `arm64` session must pass every required interaction.
 The required check names live in `xtask/src/acceptance.rs`.
 
 Exercise live screen capture, exclusion of QRScanner, permission denial, revocation and recovery, browser opening, clipboard copying, relaunch, and connected displays.
 Exercise VoiceOver, keyboard focus and actions, system text preferences, Increase Contrast, Reduce Transparency, and both appearances.
 Keep screen images and decoded content out of diagnostic logs.
-A newer macOS observation, a cross-compile, or a Rust proof supplies no macOS 26 acceptance.
+A different OS, a cross-compile, or a Rust proof supplies no macOS 27 acceptance.
 The acceptance file records operator observations rather than proving their empirical truth.
 Tests exercise the parser's refusal of missing, failing, stale, or wrong-OS records.
-OS versions need numeric minor and optional patch components after `26.`.
+OS versions need numeric minor and optional patch components after `27.`.
 Blank build and hardware fields fail validation.
 
 ## Authorized signing
@@ -60,6 +59,28 @@ Rejected or mismatched receipts stop processing.
 After acceptance, packaging checks ticket code hashes, staples the app, creates and signs the disk image, and verifies its notarization, tickets, and Gatekeeper assessments.
 Candidate directories hold checksums, a software inventory, the lockfile, and source-bound evidence.
 Publishing remains a separate owner-authorized operation.
+
+## Version proposals
+
+The release-please workflow maintains a version and changelog PR from Conventional Commits on `main`.
+It uses the existing release-please GitHub App through the `qrscanner` Doppler project's `automation` config.
+The `release-please` GitHub environment permits only `main` and has no reviewer gate for automatic proposals.
+Its repository variable `DOPPLER_AUTOMATION_IDENTITY_ID` identifies the matching read-only Doppler identity.
+Run the read-only `Verify release credentials` workflow before setting `RELEASE_PROPOSALS_ENABLED` to `true`.
+The proposal workflow never creates tags or GitHub Releases.
+Merging a proposal doesn't sign or publish an artifact.
+
+The `simple` strategy updates `version.txt` and `CHANGELOG.md`.
+Typed extra-file updaters synchronize the Rust workspace version, owned lockfile packages, and app version metadata.
+Extra-file annotations update the exact private dependency constraints.
+The initial manifest records `0.0.0` as bootstrap state before the first public release.
+The first feature release proposes `0.1.0`.
+
+After merging a release proposal, verify that exact protected source, complete native acceptance, and run the authorized package command.
+Create a draft GitHub Release for the same version and source commit.
+Upload the final disk image, checksums, software inventory, and bound verification records before publication.
+Publish only after native signature, notarization, Gatekeeper, and installation checks pass.
+Keep existing published artifacts and tags immutable.
 
 ## Development artifact
 

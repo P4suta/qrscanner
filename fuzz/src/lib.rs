@@ -1,8 +1,8 @@
-use qrscanner_verification::MacOS26;
+use qrscanner_verification::MacOS27;
 
 pub fn check_version(data: &[u8]) {
     let expected = std::str::from_utf8(data).ok().is_some_and(|text| {
-        let Some(tail) = text.strip_prefix("26.") else {
+        let Some(tail) = text.strip_prefix("27.") else {
             return false;
         };
         let components: Vec<_> = tail.split('.').collect();
@@ -11,11 +11,11 @@ pub fn check_version(data: &[u8]) {
                 !component.is_empty() && component.bytes().all(|byte| byte.is_ascii_digit())
             })
     });
-    let parsed = MacOS26::parse(data);
+    let parsed = MacOS27::parse(data);
     assert_eq!(parsed.is_some(), expected);
     if let Some(value) = parsed {
         assert_eq!(value.as_bytes(), data);
-        assert_eq!(MacOS26::parse(value.as_bytes()), Some(value));
+        assert_eq!(MacOS27::parse(value.as_bytes()), Some(value));
     }
 }
 
@@ -29,8 +29,8 @@ mod tests {
         let seeds: Vec<Vec<u8>> =
             serde_json::from_slice(include_bytes!("../corpus/macos_version/seeds.json"))?;
         assert!(!seeds.is_empty());
-        assert!(seeds.iter().any(|seed| MacOS26::parse(seed).is_some()));
-        assert!(seeds.iter().any(|seed| MacOS26::parse(seed).is_none()));
+        assert!(seeds.iter().any(|seed| MacOS27::parse(seed).is_some()));
+        assert!(seeds.iter().any(|seed| MacOS27::parse(seed).is_none()));
         for seed in seeds {
             check_version(&seed);
         }

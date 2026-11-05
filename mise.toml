@@ -9,6 +9,7 @@ swiftlint = "0.65.1"
 "cargo:cargo-mutants" = "27.1.0"
 "cargo:cargo-fuzz" = "0.13.1"
 gitleaks = "8.30.1"
+actionlint = "1.7.12"
 
 [env]
 RUSTC_WRAPPER = ""

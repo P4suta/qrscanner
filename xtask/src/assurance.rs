@@ -8,6 +8,7 @@ const SHA256_HEX_LENGTH: usize = 64;
 pub(crate) const RUST_RELEASE: &str = "1.99.1";
 
 const REQUIRED_CHECKS: &[&str] = &[
+    "workflow-lint",
     "rust-format",
     "rust-clippy",
     "rust-tests",
@@ -19,16 +20,10 @@ const REQUIRED_CHECKS: &[&str] = &[
     "native-Release",
     "compile-tests-release-arm64",
     "native-tests-release-arm64",
-    "compile-tests-release-x86_64",
-    "native-tests-release-x86_64",
     "compile-tests-address-arm64",
     "native-tests-address-arm64",
-    "compile-tests-address-x86_64",
-    "native-tests-address-x86_64",
     "compile-tests-thread-arm64",
     "native-tests-thread-arm64",
-    "compile-tests-thread-x86_64",
-    "native-tests-thread-x86_64",
     "proofs-inner-container",
     "mutants-inner-container",
     "fuzz-inner-container",
@@ -84,7 +79,7 @@ const HARNESS_NAMES: [&str; 22] = [
     "wire_decoders_match_the_documented_numeric_contract",
     "wire_transition_refines_the_core_for_every_raw_input",
     "mutation_counts_are_complete_without_arithmetic_overflow",
-    "acceptance_requires_identity_and_both_architectures",
+    "acceptance_requires_identity_and_arm64_session",
     "macos_version_parser_matches_numeric_grammar_up_to_32_bytes",
     "negative_controls_require_the_expected_assertion",
 ];
@@ -282,7 +277,7 @@ pub(crate) fn save_receipt() -> TaskResult<()> {
         commands,
         tools: serde_json::json!({"rust": String::from_utf8(rust.stdout)?, "swift": String::from_utf8(swift.stdout)?,
             "sdk": String::from_utf8(sdk.stdout)?, "os": String::from_utf8(os.stdout)?, "image": crate::verification::image()?,
-            "architectures": ["arm64", "x86_64"]}),
+            "architectures": ["arm64"]}),
         proofs_sha256: hash_file("build/evidence/proofs.json")?,
         mutations_sha256: hash_file("build/evidence/mutations.json")?,
         fuzz_sha256: hash_file("build/evidence/fuzz.json")?,

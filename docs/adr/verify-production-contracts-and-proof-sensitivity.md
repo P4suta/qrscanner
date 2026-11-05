@@ -8,6 +8,7 @@ status: proposed
 ## Status
 
 Proposed.
+Partly superseded for native target coverage by [Distribute macOS 27 on Apple silicon](distribute-macos27-on-apple-silicon.md).
 
 ## Context
 

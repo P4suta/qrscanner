@@ -8,6 +8,7 @@ status: accepted
 ## Status
 
 Accepted.
+Partly superseded for deployment target and supported architecture by [Distribute macOS 27 on Apple silicon](distribute-macos27-on-apple-silicon.md).
 Partly supersedes [Native macOS app with a verified decision core](native-macos-app-with-verified-core.md) for deployment target and sandbox adoption.
 
 ## Context

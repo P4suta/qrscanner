@@ -1,9 +1,9 @@
 use crate::TaskResult;
-use qrscanner_verification::{AcceptanceFacts, MacOS26, acceptance_complete};
+use qrscanner_verification::{AcceptanceFacts, MacOS27, acceptance_complete};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-const RECORD: &str = "build/evidence/macos26-acceptance.json";
+const RECORD: &str = "build/evidence/macos27-acceptance.json";
 const CHECKS: &[&str] = &[
     "screen-capture",
     "application-exclusion",
@@ -43,12 +43,12 @@ struct Session {
 impl NativeAcceptance {
     fn validate(&self, source: &str, binary: &str) -> TaskResult<()> {
         if self.source_sha256 != source || self.binary_sha256 != binary {
-            return Err("macOS 26 acceptance belongs to a different source or binary".into());
+            return Err("macOS 27 acceptance belongs to a different source or binary".into());
         }
         let session_accepted = |architecture| {
             self.sessions.iter().any(|session| {
                 session.architecture == architecture
-                    && MacOS26::parse(session.os_version.as_bytes()).is_some()
+                    && MacOS27::parse(session.os_version.as_bytes()).is_some()
                     && !session.os_build.trim().is_empty()
                     && !session.hardware.trim().is_empty()
                     && CHECKS
@@ -59,16 +59,17 @@ impl NativeAcceptance {
         if !acceptance_complete(AcceptanceFacts {
             identities_match: self.source_sha256 == source && self.binary_sha256 == binary,
             arm64_session: session_accepted("arm64"),
-            x86_64_session: session_accepted("x86_64"),
         }) {
-            return Err("macOS 26 login-session acceptance requires both architectures and every interaction".into());
+            return Err(
+                "macOS 27 login-session acceptance requires arm64 and every interaction".into(),
+            );
         }
         Ok(())
     }
 }
 
 pub(crate) fn check(source: &str, binary: &str) -> TaskResult<()> {
-    let bytes = fs::read(RECORD).map_err(|_| "Signed distribution requires build/evidence/macos26-acceptance.json from real login-session acceptance")?;
+    let bytes = fs::read(RECORD).map_err(|_| "Signed distribution requires build/evidence/macos27-acceptance.json from real login-session acceptance")?;
     serde_json::from_slice::<NativeAcceptance>(&bytes)?.validate(source, binary)
 }
 
@@ -80,9 +81,9 @@ mod tests {
         NativeAcceptance {
             source_sha256: "source".to_owned(),
             binary_sha256: "binary".to_owned(),
-            sessions: ["arm64", "x86_64"]
+            sessions: ["arm64"]
                 .map(|architecture| Session {
-                    os_version: "26.0".to_owned(),
+                    os_version: "27.0".to_owned(),
                     os_build: "test-fixture".to_owned(),
                     hardware: "test-fixture".to_owned(),
                     architecture: architecture.to_owned(),
@@ -96,16 +97,33 @@ mod tests {
     }
 
     #[test]
-    fn acceptance_requires_both_architectures_on_the_supported_os() {
+    fn acceptance_requires_arm64_on_the_supported_os() {
         assert!(accepted().validate("source", "binary").is_ok());
         let mut value = accepted();
         value.sessions.pop();
         assert!(value.validate("source", "binary").is_err());
         let mut value = accepted();
-        value.sessions[0].os_version = "27.0.1".to_owned();
+        value.sessions[0].os_version = "26.0.1".to_owned();
         assert!(value.validate("source", "binary").is_err());
         assert!(accepted().validate("different", "binary").is_err());
         assert!(accepted().validate("source", "different").is_err());
+    }
+
+    #[test]
+    fn distribution_accepts_only_a_macos27_arm64_login_session() {
+        let mut value = accepted();
+        value
+            .sessions
+            .retain(|session| session.architecture == "arm64");
+        value.sessions[0].os_version = "27.0.1".to_owned();
+        assert!(value.validate("source", "binary").is_ok());
+        for version in ["26.0", "28.0"] {
+            value.sessions[0].os_version = version.to_owned();
+            assert!(value.validate("source", "binary").is_err());
+        }
+        value.sessions[0].os_version = "27.0.1".to_owned();
+        value.sessions[0].architecture = "x86_64".to_owned();
+        assert!(value.validate("source", "binary").is_err());
     }
 
     #[test]
@@ -122,13 +140,13 @@ mod tests {
     #[test]
     fn malformed_os_versions_and_blank_metadata_are_refused() {
         for version in [
-            "26.",
-            "26.invalid",
-            "26.0.",
-            "26.0.1.2",
-            "26.0\n",
-            "26..1",
-            "26.０",
+            "27.",
+            "27.invalid",
+            "27.0.",
+            "27.0.1.2",
+            "27.0\n",
+            "27..1",
+            "27.０",
         ] {
             let mut value = accepted();
             value.sessions[0].os_version = version.to_owned();
@@ -145,7 +163,7 @@ mod tests {
             value.sessions[0].hardware = blank.to_owned();
             assert!(value.validate("source", "binary").is_err());
         }
-        for version in ["26.0", "26.1", "26.0.1", "26.12.34"] {
+        for version in ["27.0", "27.1", "27.0.1", "27.12.34"] {
             let mut value = accepted();
             value.sessions[0].os_version = version.to_owned();
             assert!(value.validate("source", "binary").is_ok());

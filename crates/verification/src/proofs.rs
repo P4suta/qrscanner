@@ -100,15 +100,14 @@ fn mutation_counts_are_complete_without_arithmetic_overflow() {
 }
 
 #[kani::proof]
-fn acceptance_requires_identity_and_both_architectures() {
+fn acceptance_requires_identity_and_arm64_session() {
     let facts = AcceptanceFacts {
         identities_match: kani::any(),
         arm64_session: kani::any(),
-        x86_64_session: kani::any(),
     };
     assert_eq!(
         acceptance_complete(facts),
-        facts.identities_match && facts.arm64_session && facts.x86_64_session
+        facts.identities_match && facts.arm64_session
     );
     kani::cover!(
         acceptance_complete(facts),
@@ -137,13 +136,13 @@ fn macos_version_parser_matches_numeric_grammar_up_to_32_bytes() {
                 None => component(tail),
             });
     let specified = version.first() == Some(&b'2')
-        && version.get(1) == Some(&b'6')
+        && version.get(1) == Some(&b'7')
         && version.get(2) == Some(&b'.')
         && numeric;
-    assert_eq!(MacOS26::parse(version).is_some(), specified);
-    if let Some(parsed) = MacOS26::parse(version) {
+    assert_eq!(MacOS27::parse(version).is_some(), specified);
+    if let Some(parsed) = MacOS27::parse(version) {
         assert_eq!(parsed.as_bytes(), version);
-        assert_eq!(MacOS26::parse(parsed.as_bytes()), Some(parsed));
+        assert_eq!(MacOS27::parse(parsed.as_bytes()), Some(parsed));
     }
     kani::cover!(
         specified && length == 6,

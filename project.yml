@@ -1,7 +1,7 @@
 name: QRScanner
 options:
   deploymentTarget:
-    macOS: "26.0"
+    macOS: "27.0"
   xcodeVersion: "27.1"
 settings:
   base:
@@ -9,7 +9,8 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
     GCC_TREAT_WARNINGS_AS_ERRORS: YES
-    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    MACOSX_DEPLOYMENT_TARGET: "27.0"
+    ARCHS: arm64
     SWIFT_EMIT_LOC_STRINGS: YES
     ENABLE_HARDENED_RUNTIME: YES
     ENABLE_DEBUG_DYLIB: NO
