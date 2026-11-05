@@ -1,0 +1,229 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ is unavailable. Choose another shortcut." : {
+
+    },
+    "%lld QR codes found" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld QR code found"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld QR codes found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "A display image wasn’t available. Make sure the QR code is visible, then try again." : {
+
+    },
+    "Allow Screen Recording" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Close" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Copy Link" : {
+
+    },
+    "Copy Text" : {
+
+    },
+    "Couldn’t copy. Try again or select the text to copy it." : {
+
+    },
+    "Couldn’t open System Settings. Open it from the Apple menu, then enable screen access." : {
+
+    },
+    "Couldn’t open the link. Try again or copy it." : {
+
+    },
+    "Couldn’t read the captured image. Try scanning again." : {
+
+    },
+    "Couldn’t register the shortcut. Use Scan Screen in the menu bar." : {
+
+    },
+    "Couldn’t scan your screen" : {
+
+    },
+    "Decoded text" : {
+
+    },
+    "Decoded value" : {
+
+    },
+    "Empty text" : {
+
+    },
+    "Full link" : {
+
+    },
+    "If macOS asks you to reopen the app, choose Quit & Reopen." : {
+
+    },
+    "In System Settings, open Privacy & Security → Screen & System Audio Recording, then enable QRScanner." : {
+
+    },
+    "Include Command, Control, or Option, then press a character key or Space." : {
+
+    },
+    "Include Command, Control, or Option. Press Esc to cancel." : {
+
+    },
+    "Keyboard Shortcut" : {
+
+    },
+    "Link" : {
+
+    },
+    "Looking for QR codes…" : {
+
+    },
+    "Make sure the QR code is visible, then scan your screen." : {
+
+    },
+    "Make sure the entire QR code is visible, then scan again." : {
+
+    },
+    "No QR codes found" : {
+
+    },
+    "No displays are available. Connect or wake a display, then try again." : {
+
+    },
+    "No readable text" : {
+
+    },
+    "No shortcut is active. Use Scan Screen in the menu bar." : {
+
+    },
+    "Open Link" : {
+
+    },
+    "Open System Settings…" : {
+
+    },
+    "Press shortcut…" : {
+
+    },
+    "QR Code Content" : {
+
+    },
+    "QR codes" : {
+
+    },
+    "QRScanner" : {
+
+    },
+    "QRScanner Settings" : {
+
+    },
+    "QRScanner needs screen access to read QR codes. Screenshots are processed on your Mac and aren’t saved." : {
+
+    },
+    "Quit QRScanner" : {
+
+    },
+    "Quit QRScanner and open it again to finish granting screen access." : {
+
+    },
+    "Quit and reopen QRScanner to scan again." : {
+
+    },
+    "Record Shortcut" : {
+
+    },
+    "Relaunch QRScanner" : {
+
+    },
+    "Reopen QRScanner" : {
+
+    },
+    "Restore Default" : {
+
+    },
+    "Scan Again" : {
+
+    },
+    "Scan QR codes on your screen" : {
+
+    },
+    "Scan Screen" : {
+
+    },
+    "Scan Screen keyboard shortcut" : {
+
+    },
+    "Scan from anywhere with %@." : {
+
+    },
+    "Screen access is enabled. Reopen QRScanner to use it." : {
+
+    },
+    "Screen access is ready" : {
+
+    },
+    "Selected link" : {
+
+    },
+    "Show a QR code on any display, then scan to open its link or copy its text." : {
+
+    },
+    "Text" : {
+
+    },
+    "Text Size" : {
+
+    },
+    "The saved shortcut was invalid. The default shortcut has been restored." : {
+
+    },
+    "This QR code contains an empty text value." : {
+
+    },
+    "This QR code doesn’t contain readable text. QRScanner can open web links and copy text." : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Try Another Shortcut" : {
+
+    },
+    "Try scanning again. If the problem continues, quit and reopen QRScanner." : {
+
+    },
+    "Turn on screen access" : {
+
+    },
+    "Use Scan Screen in the menu bar." : {
+
+    },
+    "Use this shortcut to scan all visible displays, even when another app is active." : {
+
+    },
+    "Your current shortcut %@ is still active." : {
+
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,0 +1,10 @@
+**
+!Cargo.toml
+!Cargo.lock
+!crates/
+!crates/**
+!xtask/
+!xtask/**
+!verification/
+!verification/Dockerfile
+!verification/cached-tools.Dockerfile

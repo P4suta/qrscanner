@@ -1,0 +1,17 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSScreenCaptureUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QRScanner reads QR codes visible on your screens when you start a scan."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,13 @@
+included:
+  - native/App
+  - native/Shared
+  - native/Tests
+  - native/Tools
+line_length:
+  warning: 180
+  error: 220
+opt_in_rules:
+  - force_unwrapping
+  - empty_count
+  - first_where
+  - unused_optional_binding

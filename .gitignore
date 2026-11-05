@@ -1,0 +1,6 @@
+/build/
+/target/
+/.cache/
+/.DS_Store
+*.xcuserstate
+xcuserdata/
