@@ -1,10 +1,16 @@
 import Foundation
+import AppKit
 import XCTest
 
 @main
 struct NativeTestRunner {
     @MainActor
     static func main() {
+        _ = NSApplication.shared.setActivationPolicy(.prohibited)
+        guard NSApplication.shared.activationPolicy() == .prohibited else {
+            fputs("Native tests require prohibited app activation.\n", stderr)
+            exit(EXIT_FAILURE)
+        }
         let suite = XCTestSuite(name: "QRScanner native verification")
         let suites = [PayloadTests.defaultTestSuite, CoreBridgeTests.defaultTestSuite, AppModelTests.defaultTestSuite,
                       QRDecoderTests.defaultTestSuite, InterfaceTests.defaultTestSuite,

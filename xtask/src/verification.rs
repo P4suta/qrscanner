@@ -15,11 +15,18 @@ const MUTATION_TEMP_DIRECTORY: &str = "/tmp";
 const MUTATION_TOOL_VERSION: &str = "27.1.0";
 const CONTAINER_TIMEOUT_EXIT: i32 = 124;
 const KILLED_PROCESS_EXIT: i32 = 137;
+const MUTATION_FILES: &[&str] = &[
+    "crates/core/src/lib.rs",
+    "crates/ffi/src/lib.rs",
+    "crates/verification/src/lib.rs",
+];
 
 #[derive(Clone, Copy)]
 pub(crate) enum Campaign {
     Proofs,
     Mutations,
+    MutationPlan,
+    Fuzz,
 }
 
 impl Campaign {
@@ -27,6 +34,8 @@ impl Campaign {
         match self {
             Self::Proofs => "proofs-inner",
             Self::Mutations => "mutants-inner",
+            Self::MutationPlan => "mutation-plan-inner",
+            Self::Fuzz => "fuzz-inner",
         }
     }
 
@@ -34,6 +43,8 @@ impl Campaign {
         match self {
             Self::Proofs => "proofs.json",
             Self::Mutations => "mutations.json",
+            Self::MutationPlan => "mutation-plan.json",
+            Self::Fuzz => "fuzz.json",
         }
     }
 }
@@ -89,6 +100,8 @@ fn recipe_digest() -> TaskResult<String> {
         "Cargo.toml",
         "crates/core/Cargo.toml",
         "crates/ffi/Cargo.toml",
+        "crates/verification/Cargo.toml",
+        "fuzz/Cargo.toml",
         "xtask/Cargo.toml",
     ] {
         input.extend_from_slice(&fs::read(path)?);
@@ -233,34 +246,70 @@ pub(crate) fn bounded(campaign: Campaign) -> TaskResult<()> {
     Ok(())
 }
 
+fn mutation_arguments() -> Vec<&'static str> {
+    let mut arguments = vec![
+        "mutants",
+        "--cargo-arg=--offline",
+        "--cargo-arg=--locked",
+        "--package",
+        "qrscanner-core",
+        "--package",
+        "qrscanner-ffi",
+        "--package",
+        "qrscanner-verification",
+    ];
+    for file in MUTATION_FILES {
+        arguments.extend(["--file", file]);
+    }
+    arguments
+}
+
+pub(crate) fn mutation_plan() -> TaskResult<()> {
+    let mut arguments = mutation_arguments();
+    arguments.extend(["--list", "--json"]);
+    let output = run("cargo", &arguments, "mutation-plan")?;
+    let inventory: Vec<serde_json::Value> = serde_json::from_slice(&output.stdout)?;
+    if inventory.is_empty() {
+        return Err("Mutation plan is empty".into());
+    }
+    if !mutation_files_complete(&inventory) {
+        return Err("Mutation plan omits a required production file".into());
+    }
+    fs::create_dir_all("build/evidence")?;
+    fs::write(
+        "build/evidence/mutation-plan.json",
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "source_sha256": assurance::source_digest(Path::new("."))?, "total": inventory.len(),
+            "tool": format!("cargo-mutants {MUTATION_TOOL_VERSION}"), "files": MUTATION_FILES, "inventory": inventory
+        }))?,
+    )?;
+    println!(
+        "[qrscanner] planned {} mutants in {} production files",
+        inventory.len(),
+        MUTATION_FILES.len()
+    );
+    Ok(())
+}
+
 pub(crate) fn mutations() -> TaskResult<()> {
     let source = assurance::source_digest(Path::new("."))?;
     let evidence = Path::new("build/evidence/mutations.json");
     if evidence.exists() {
         fs::remove_file(evidence)?;
     }
+    let mut arguments = mutation_arguments();
+    arguments.extend([
+        "--no-shuffle",
+        "--jobs",
+        "2",
+        "--timeout",
+        "60",
+        "--output",
+        "build/mutants",
+    ]);
     let output = crate::invoke_with_environment(
         "cargo",
-        &[
-            "mutants",
-            "--cargo-arg=--offline",
-            "--cargo-arg=--locked",
-            "--package",
-            "qrscanner-core",
-            "--package",
-            "qrscanner-ffi",
-            "--file",
-            "crates/core/src/lib.rs",
-            "--file",
-            "crates/ffi/src/lib.rs",
-            "--no-shuffle",
-            "--jobs",
-            "2",
-            "--timeout",
-            "60",
-            "--output",
-            "build/mutants",
-        ],
+        &arguments,
         "mutation-campaign",
         &[("TMPDIR", MUTATION_TEMP_DIRECTORY)],
     )?;
@@ -295,6 +344,7 @@ pub(crate) fn mutations() -> TaskResult<()> {
         .filter_map(|entry| entry["name"].as_str())
         .collect();
     if u64::try_from(entries.len())? != total
+        || !mutation_files_complete(entries)
         || names.len() != entries.len()
         || !report["outcomes"]
             .as_array()
@@ -315,10 +365,19 @@ pub(crate) fn mutations() -> TaskResult<()> {
         serde_json::to_vec_pretty(&serde_json::json!({
             "source_sha256": source,
             "tool": format!("cargo-mutants {MUTATION_TOOL_VERSION}"), "total": total, "report": report,
-            "files": ["crates/core/src/lib.rs", "crates/ffi/src/lib.rs"]
+            "files": MUTATION_FILES
         }))?,
     )?;
     Ok(())
+}
+
+fn mutation_files_complete(entries: &[serde_json::Value]) -> bool {
+    let files: std::collections::BTreeSet<_> = entries
+        .iter()
+        .filter_map(|entry| entry["file"].as_str())
+        .collect();
+    entries.iter().all(|entry| entry["file"].as_str().is_some())
+        && files == MUTATION_FILES.iter().copied().collect()
 }
 
 fn mutation_report_complete(report: &serde_json::Value) -> bool {
@@ -334,15 +393,7 @@ fn mutation_report_complete(report: &serde_json::Value) -> bool {
     let Some(outcomes) = report["outcomes"].as_array() else {
         return false;
     };
-    if total == 0
-        || caught == 0
-        || caught.checked_add(unviable) != Some(total)
-        || report["cargo_mutants_version"].as_str() != Some(MUTATION_TOOL_VERSION)
-        || report["missed"].as_u64() != Some(0)
-        || report["timeout"].as_u64() != Some(0)
-        || report["success"].as_u64() != Some(0)
-        || u64::try_from(outcomes.len()).ok() != total.checked_add(1)
-    {
+    if report["cargo_mutants_version"].as_str() != Some(MUTATION_TOOL_VERSION) {
         return false;
     }
     let mut baselines = 0;
@@ -369,12 +420,31 @@ fn mutation_report_complete(report: &serde_json::Value) -> bool {
             }
         }
     }
-    baselines == 1 && caught_outcomes == caught && unviable_outcomes == unviable
+    let (Some(missed), Some(timed_out), Some(unexpected_success), Ok(outcomes)) = (
+        report["missed"].as_u64(),
+        report["timeout"].as_u64(),
+        report["success"].as_u64(),
+        u64::try_from(outcomes.len()),
+    ) else {
+        return false;
+    };
+    qrscanner_verification::mutations_complete(qrscanner_verification::MutationCounts {
+        total,
+        caught,
+        unviable,
+        missed,
+        timed_out,
+        unexpected_success,
+        outcomes,
+        baselines,
+        caught_outcomes,
+        unviable_outcomes,
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::mutation_report_complete;
+    use super::{MUTATION_FILES, mutation_files_complete, mutation_report_complete};
     use serde_json::json;
 
     fn complete_report() -> serde_json::Value {
@@ -410,6 +480,25 @@ mod tests {
                 !mutation_report_complete(&report),
                 "accepted incomplete {key}"
             );
+        }
+    }
+
+    #[test]
+    fn mutation_inventory_covers_each_required_file_and_refuses_unknown_files() {
+        let entries: Vec<_> = MUTATION_FILES
+            .iter()
+            .map(|file| json!({"file": file}))
+            .collect();
+        assert!(mutation_files_complete(&entries));
+        for index in 0..entries.len() {
+            let mut missing = entries.clone();
+            missing.remove(index);
+            assert!(!mutation_files_complete(&missing));
+        }
+        for invalid in [json!({"file": "unselected.rs"}), json!({})] {
+            let mut altered = entries.clone();
+            altered.push(invalid);
+            assert!(!mutation_files_complete(&altered));
         }
     }
 }

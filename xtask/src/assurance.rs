@@ -21,11 +21,20 @@ const REQUIRED_CHECKS: &[&str] = &[
     "native-tests-release-arm64",
     "compile-tests-release-x86_64",
     "native-tests-release-x86_64",
+    "compile-tests-address-arm64",
+    "native-tests-address-arm64",
+    "compile-tests-address-x86_64",
+    "native-tests-address-x86_64",
+    "compile-tests-thread-arm64",
+    "native-tests-thread-arm64",
+    "compile-tests-thread-x86_64",
+    "native-tests-thread-x86_64",
     "proofs-inner-container",
     "mutants-inner-container",
+    "fuzz-inner-container",
 ];
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct CommandRecord {
     name: String,
@@ -55,7 +64,7 @@ pub(crate) fn record_command(program: &str, args: &[&str], name: &str) -> TaskRe
 pub(crate) const RELEASE_BINARY: &str =
     "build/xcode/Build/Products/Release/QRScanner.app/Contents/MacOS/QRScanner";
 pub(crate) const RECEIPT: &str = "build/evidence/verification.json";
-const HARNESS_NAMES: [&str; 11] = [
+const HARNESS_NAMES: [&str; 22] = [
     "opening_requires_current_confirmed_web_result",
     "cancellation_rejects_every_late_completion",
     "stale_events_have_no_effect",
@@ -67,7 +76,53 @@ const HARNESS_NAMES: [&str; 11] = [
     "release_receipts_must_match_and_be_accepted",
     "incomplete_verification_cannot_authorize_signing",
     "verification_artifacts_have_distinct_destinations",
+    "begin_is_total_and_makes_progress",
+    "completion_and_failure_have_exact_outcomes",
+    "cancellation_always_closes_and_preserves_generation",
+    "result_actions_and_open_completion_have_exact_outcomes",
+    "eight_event_traces_preserve_confirmation_and_generations",
+    "wire_decoders_match_the_documented_numeric_contract",
+    "wire_transition_refines_the_core_for_every_raw_input",
+    "mutation_counts_are_complete_without_arithmetic_overflow",
+    "acceptance_requires_identity_and_both_architectures",
+    "macos_version_parser_matches_numeric_grammar_up_to_32_bytes",
+    "negative_controls_require_the_expected_assertion",
 ];
+const COVER_PROPERTIES: usize = 23;
+const EVENT_TRACE_LENGTH: usize = 8;
+const EVENT_TRACE_UNWIND: usize = EVENT_TRACE_LENGTH + 1;
+const OS_VERSION_BYTES: usize = 32;
+const OS_VERSION_UNWIND: usize = OS_VERSION_BYTES + 1;
+
+fn proof_output_complete(output: &str) -> bool {
+    let count = HARNESS_NAMES.len();
+    let summary =
+        format!("Complete - {count} successfully verified harnesses, 0 failures, {count} total.");
+    let harnesses: Vec<_> = output
+        .lines()
+        .filter_map(|line| {
+            line.strip_prefix("Checking harness ")?
+                .strip_suffix("...")?
+                .rsplit("::")
+                .next()
+        })
+        .collect();
+    let names: std::collections::BTreeSet<_> = harnesses.iter().copied().collect();
+    let mut covers = 0;
+    let mut lines = output.lines();
+    while let Some(line) = lines.next() {
+        if line.starts_with("Check ") && line.contains(".cover.") {
+            if lines.next().map(str::trim) != Some("- Status: SATISFIED") {
+                return false;
+            }
+            covers += 1;
+        }
+    }
+    output.lines().any(|line| line == summary)
+        && harnesses.len() == count
+        && names == HARNESS_NAMES.into_iter().collect()
+        && covers == COVER_PROPERTIES
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -81,11 +136,12 @@ pub(crate) struct VerificationReceipt {
     pub(crate) tools: serde_json::Value,
     pub(crate) proofs_sha256: String,
     pub(crate) mutations_sha256: String,
+    pub(crate) fuzz_sha256: String,
 }
 
 impl VerificationReceipt {
     fn validate(&self, source: &str, binary: &str) -> TaskResult<()> {
-        let facts = crate::release_rules::VerificationFacts {
+        let facts = qrscanner_verification::VerificationFacts {
             identities_match: self.source_sha256 == source && self.binary_sha256 == binary,
             checks_complete: self.checks.len() == REQUIRED_CHECKS.len()
                 && REQUIRED_CHECKS
@@ -118,9 +174,10 @@ impl VerificationReceipt {
                     .is_some_and(|value| value.starts_with("sha256:")),
             artifacts_bound: self.proofs_sha256.len() == SHA256_HEX_LENGTH
                 && self.mutations_sha256.len() == SHA256_HEX_LENGTH
-                && self.resources_sha256.len() == SHA256_HEX_LENGTH,
+                && self.resources_sha256.len() == SHA256_HEX_LENGTH
+                && self.fuzz_sha256.len() == SHA256_HEX_LENGTH,
         };
-        if !crate::release_rules::verification_complete(facts) {
+        if !qrscanner_verification::verification_complete(facts) {
             return Err(
                 "Verification evidence is incomplete or stale; run mise x -- just verify-release"
                     .into(),
@@ -190,7 +247,7 @@ pub(crate) fn save_receipt() -> TaskResult<()> {
             format!("build/evidence/commands/{name}.json"),
         )?)?);
     }
-    for record in ["proofs", "mutations"] {
+    for record in ["proofs", "mutations", "fuzz"] {
         let value: serde_json::Value =
             serde_json::from_slice(&fs::read(format!("build/evidence/{record}.json"))?)?;
         if value["source_sha256"].as_str() != Some(&source) {
@@ -228,26 +285,37 @@ pub(crate) fn save_receipt() -> TaskResult<()> {
             "architectures": ["arm64", "x86_64"]}),
         proofs_sha256: hash_file("build/evidence/proofs.json")?,
         mutations_sha256: hash_file("build/evidence/mutations.json")?,
+        fuzz_sha256: hash_file("build/evidence/fuzz.json")?,
     };
     receipt.validate(&source, &hash_file(RELEASE_BINARY)?)?;
+    check_command_logs(Path::new("."), &receipt.commands)?;
     fs::create_dir_all("build/evidence")?;
     fs::write(RECEIPT, serde_json::to_vec_pretty(&receipt)?)?;
     Ok(())
 }
 
 pub(crate) fn checked_receipt() -> TaskResult<VerificationReceipt> {
+    checked_receipt_at(Path::new("."), &crate::verification::image()?)
+}
+
+fn checked_receipt_at(root: &Path, image: &str) -> TaskResult<VerificationReceipt> {
     let receipt: VerificationReceipt = serde_json::from_slice(
-        &fs::read(RECEIPT)
+        &fs::read(root.join(RECEIPT))
             .map_err(|_| "No completed verification receipt; run mise x -- just verify-release")?,
     )?;
-    receipt.validate(&source_digest(Path::new("."))?, &hash_file(RELEASE_BINARY)?)?;
+    receipt.validate(
+        &source_digest(root)?,
+        &hash_file(root.join(RELEASE_BINARY))?,
+    )?;
+    check_command_logs(root, &receipt.commands)?;
     if receipt.resources_sha256
-        != source_digest(Path::new(
-            "build/xcode/Build/Products/Release/QRScanner.app/Contents/Resources",
-        ))?
-        || receipt.proofs_sha256 != hash_file("build/evidence/proofs.json")?
-        || receipt.mutations_sha256 != hash_file("build/evidence/mutations.json")?
-        || receipt.tools["image"].as_str() != Some(&crate::verification::image()?)
+        != source_digest(
+            &root.join("build/xcode/Build/Products/Release/QRScanner.app/Contents/Resources"),
+        )?
+        || receipt.proofs_sha256 != hash_file(root.join("build/evidence/proofs.json"))?
+        || receipt.mutations_sha256 != hash_file(root.join("build/evidence/mutations.json"))?
+        || receipt.fuzz_sha256 != hash_file(root.join("build/evidence/fuzz.json"))?
+        || receipt.tools["image"].as_str() != Some(image)
     {
         return Err(
             "The verified resources, proof evidence, mutation evidence, or tool image changed"
@@ -255,6 +323,21 @@ pub(crate) fn checked_receipt() -> TaskResult<VerificationReceipt> {
         );
     }
     Ok(receipt)
+}
+
+fn check_command_logs(root: &Path, commands: &[CommandRecord]) -> TaskResult<()> {
+    for command in commands {
+        let saved: CommandRecord = serde_json::from_slice(&fs::read(
+            root.join(format!("build/evidence/commands/{}.json", command.name)),
+        )?)?;
+        if &saved != command
+            || command.log_sha256
+                != hash_file(root.join(format!("build/logs/{}.log", command.name)))?
+        {
+            return Err(format!("The verified command or log changed: {}", command.name).into());
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn prove(toolchain: Option<&str>) -> TaskResult<()> {
@@ -271,6 +354,8 @@ pub(crate) fn prove(toolchain: Option<&str>) -> TaskResult<()> {
             "-p",
             "qrscanner-ffi",
             "-p",
+            "qrscanner-verification",
+            "-p",
             "xtask",
         ],
         "kani-proofs",
@@ -278,9 +363,7 @@ pub(crate) fn prove(toolchain: Option<&str>) -> TaskResult<()> {
     )?;
     let output = String::from_utf8(result.stdout)?;
     let count = HARNESS_NAMES.len();
-    let summary =
-        format!("Complete - {count} successfully verified harnesses, 0 failures, {count} total.");
-    if !output.contains(&summary) || HARNESS_NAMES.iter().any(|name| !output.contains(name)) {
+    if !proof_output_complete(&output) {
         return Err("Kani did not complete every required production harness".into());
     }
     let arguments = [
@@ -308,6 +391,7 @@ pub(crate) fn prove(toolchain: Option<&str>) -> TaskResult<()> {
             "The expected automatic-opening counterexample was not rejected by Kani".into(),
         );
     }
+    let rejected_faults = crate::proof_controls::run()?;
     println!(
         "[qrscanner] {count} production proofs passed; automatic-opening counterexample rejected"
     );
@@ -319,6 +403,10 @@ pub(crate) fn prove(toolchain: Option<&str>) -> TaskResult<()> {
             "verifier": String::from_utf8(verifier.stdout)?, "compiler": String::from_utf8(compiler.stdout)?,
             "target": "x86_64-unknown-linux-gnu",
             "harnesses": HARNESS_NAMES, "negative_control_rejected": true,
+            "satisfied_cover_properties": COVER_PROPERTIES,
+            "rejected_production_faults": rejected_faults,
+            "bounds": {"event_trace_length": EVENT_TRACE_LENGTH, "event_trace_unwind": EVENT_TRACE_UNWIND,
+                "os_version_bytes": OS_VERSION_BYTES, "os_version_unwind": OS_VERSION_UNWIND},
             "native_integration_verified": false
         }))?,
     )?;
@@ -328,6 +416,33 @@ pub(crate) fn prove(toolchain: Option<&str>) -> TaskResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn proof_evidence_requires_exact_harnesses_and_reachable_cover_properties() {
+        let mut output = HARNESS_NAMES
+            .iter()
+            .map(|name| format!("Checking harness proofs::{name}...\n"))
+            .collect::<String>();
+        for index in 0..COVER_PROPERTIES {
+            output.push_str(&format!(
+                "Check {index}: proof.cover.{index}\n - Status: SATISFIED\n"
+            ));
+        }
+        let count = HARNESS_NAMES.len();
+        output.push_str(&format!(
+            "Complete - {count} successfully verified harnesses, 0 failures, {count} total.\n"
+        ));
+        assert!(proof_output_complete(&output));
+        for altered in [
+            output.replacen(HARNESS_NAMES[0], "undeclared_harness", 1),
+            output.replacen(HARNESS_NAMES[0], HARNESS_NAMES[1], 1),
+            output.replacen("- Status: SATISFIED", "- Status: UNSATISFIABLE", 1),
+            output.replacen("0 failures", "1 failures", 1),
+            output.replacen("Check 0: proof.cover.0\n - Status: SATISFIED\n", "", 1),
+        ] {
+            assert!(!proof_output_complete(&altered));
+        }
+    }
 
     fn receipt() -> VerificationReceipt {
         VerificationReceipt {
@@ -340,6 +455,7 @@ mod tests {
             tools: serde_json::Value::Null,
             proofs_sha256: String::new(),
             mutations_sha256: String::new(),
+            fuzz_sha256: String::new(),
         }
     }
 
@@ -391,6 +507,7 @@ mod tests {
         value.resources_sha256 = "b".repeat(64);
         value.proofs_sha256 = "c".repeat(64);
         value.mutations_sha256 = "d".repeat(64);
+        value.fuzz_sha256 = "e".repeat(64);
         value
     }
 
@@ -433,6 +550,116 @@ mod tests {
         fs::write(root.join("build/output"), "new generated")?;
         assert_eq!(source, source_digest(&root)?);
         fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    struct EvidenceFixture(PathBuf);
+
+    impl Drop for EvidenceFixture {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn evidence_fixture(label: &str) -> TaskResult<EvidenceFixture> {
+        let root =
+            std::env::temp_dir().join(format!("qrscanner-evidence-{label}-{}", std::process::id()));
+        fs::create_dir(&root)?;
+        let fixture = EvidenceFixture(root.clone());
+        fs::write(root.join("source.rs"), "source fixture")?;
+        for path in [
+            RELEASE_BINARY,
+            "build/xcode/Build/Products/Release/QRScanner.app/Contents/Resources/fixture",
+            "build/evidence/proofs.json",
+            "build/evidence/mutations.json",
+            "build/evidence/fuzz.json",
+        ] {
+            let destination = root.join(path);
+            fs::create_dir_all(destination.parent().ok_or("Missing fixture parent")?)?;
+            fs::write(destination, path)?;
+        }
+        fs::create_dir_all(root.join("build/logs"))?;
+        fs::create_dir_all(root.join("build/evidence/commands"))?;
+        let mut receipt = complete_receipt();
+        receipt.source_sha256 = source_digest(&root)?;
+        receipt.binary_sha256 = hash_file(root.join(RELEASE_BINARY))?;
+        receipt.resources_sha256 = source_digest(
+            &root.join("build/xcode/Build/Products/Release/QRScanner.app/Contents/Resources"),
+        )?;
+        receipt.proofs_sha256 = hash_file(root.join("build/evidence/proofs.json"))?;
+        receipt.mutations_sha256 = hash_file(root.join("build/evidence/mutations.json"))?;
+        receipt.fuzz_sha256 = hash_file(root.join("build/evidence/fuzz.json"))?;
+        for command in &mut receipt.commands {
+            let log = root.join(format!("build/logs/{}.log", command.name));
+            fs::write(&log, &command.name)?;
+            command.source_sha256.clone_from(&receipt.source_sha256);
+            command.log_sha256 = hash_file(log)?;
+            fs::write(
+                root.join(format!("build/evidence/commands/{}.json", command.name)),
+                serde_json::to_vec(command)?,
+            )?;
+        }
+        fs::write(root.join(RECEIPT), serde_json::to_vec(&receipt)?)?;
+        Ok(fixture)
+    }
+
+    #[test]
+    fn receipt_consumption_rejects_changed_or_missing_logs_and_command_records() -> TaskResult<()> {
+        for name in REQUIRED_CHECKS {
+            for record in [false, true] {
+                for missing in [false, true] {
+                    let fixture = evidence_fixture(&format!("{name}-{record}-{missing}"))?;
+                    assert!(checked_receipt_at(&fixture.0, "sha256:abc").is_ok());
+                    let path = if record {
+                        format!("build/evidence/commands/{name}.json")
+                    } else {
+                        format!("build/logs/{name}.log")
+                    };
+                    let target = fixture.0.join(&path);
+                    if missing {
+                        fs::remove_file(target)?;
+                    } else if record {
+                        let mut altered: CommandRecord =
+                            serde_json::from_slice(&fs::read(&target)?)?;
+                        altered.command = vec!["altered-command".to_owned()];
+                        fs::write(target, serde_json::to_vec(&altered)?)?;
+                    } else {
+                        fs::write(target, "altered evidence")?;
+                    }
+                    assert!(
+                        checked_receipt_at(&fixture.0, "sha256:abc").is_err(),
+                        "accepted altered {path}"
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn receipt_consumption_rejects_changed_sources_resources_reports_binaries_and_tools()
+    -> TaskResult<()> {
+        for (index, path) in [
+            "source.rs",
+            RELEASE_BINARY,
+            "build/xcode/Build/Products/Release/QRScanner.app/Contents/Resources/fixture",
+            "build/evidence/proofs.json",
+            "build/evidence/mutations.json",
+            "build/evidence/fuzz.json",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let fixture = evidence_fixture(&format!("artifact-{index}"))?;
+            assert!(checked_receipt_at(&fixture.0, "sha256:abc").is_ok());
+            fs::write(fixture.0.join(path), "changed artifact")?;
+            assert!(
+                checked_receipt_at(&fixture.0, "sha256:abc").is_err(),
+                "accepted altered {path}"
+            );
+        }
+        let fixture = evidence_fixture("image")?;
+        assert!(checked_receipt_at(&fixture.0, "sha256:other").is_err());
         Ok(())
     }
 }

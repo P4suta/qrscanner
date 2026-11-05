@@ -86,6 +86,7 @@ fn stale_events_have_no_effect() {
     let state = arbitrary_state();
     let id = ScanId::from_raw(kani::any());
     kani::assume(id != state.id);
+    kani::cover!(id != state.id, "stale generations are admitted");
     let event = match kani::any::<u8>() {
         0 => Event::Completed {
             id,
@@ -199,5 +200,258 @@ fn reject_automatic_open_probe() {
     kani::assert(
         result.effect == Effect::OpenSelected,
         "NEGATIVE_CONTROL_AUTOMATIC_OPEN",
+    );
+}
+
+#[kani::proof]
+fn begin_is_total_and_makes_progress() {
+    let state = arbitrary_state();
+    let result = transition(state, Event::Begin);
+    let expected = if matches!(state.phase, Phase::Scanning | Phase::Opening) {
+        Transition {
+            state,
+            effect: Effect::None,
+        }
+    } else if state.id.raw() == u64::MAX {
+        Transition {
+            state,
+            effect: Effect::PresentExhausted,
+        }
+    } else {
+        Transition {
+            state: ScanState {
+                id: ScanId::from_raw(state.id.raw() + 1),
+                phase: Phase::Scanning,
+            },
+            effect: Effect::Capture,
+        }
+    };
+    kani::assert(result == expected, "BEGIN_PROGRESS");
+    kani::cover!(result.effect == Effect::Capture, "capture makes progress");
+    kani::cover!(
+        result.effect == Effect::PresentExhausted,
+        "exhaustion is reachable"
+    );
+}
+
+#[kani::proof]
+fn completion_and_failure_have_exact_outcomes() {
+    let state = arbitrary_state();
+    let id = ScanId::from_raw(kani::any());
+    let found: bool = kani::any();
+    let completed = transition(state, Event::Completed { id, found });
+    let failed = transition(state, Event::Failed { id });
+    let current = state.id == id && state.phase == Phase::Scanning;
+    let expected = if current {
+        Transition {
+            state: ScanState {
+                phase: if found { Phase::Results } else { Phase::Empty },
+                ..state
+            },
+            effect: if found {
+                Effect::PresentResults
+            } else {
+                Effect::PresentEmpty
+            },
+        }
+    } else {
+        Transition {
+            state,
+            effect: Effect::None,
+        }
+    };
+    kani::assert(completed == expected, "COMPLETION_CONTRACT");
+    assert_eq!(
+        failed,
+        if current {
+            Transition {
+                state: ScanState {
+                    phase: Phase::Failed,
+                    ..state
+                },
+                effect: Effect::PresentFailure,
+            }
+        } else {
+            Transition {
+                state,
+                effect: Effect::None,
+            }
+        }
+    );
+    kani::cover!(
+        completed.effect == Effect::PresentResults,
+        "results are reachable"
+    );
+    kani::cover!(
+        completed.effect == Effect::PresentEmpty,
+        "empty results are reachable"
+    );
+    kani::cover!(
+        failed.effect == Effect::PresentFailure,
+        "scan failure is reachable"
+    );
+}
+
+#[kani::proof]
+fn cancellation_always_closes_and_preserves_generation() {
+    let state = arbitrary_state();
+    let result = transition(state, Event::Cancel);
+    assert_eq!(
+        result,
+        Transition {
+            state: ScanState {
+                phase: Phase::Idle,
+                ..state
+            },
+            effect: Effect::Close
+        }
+    );
+}
+
+#[kani::proof]
+fn result_actions_and_open_completion_have_exact_outcomes() {
+    let state = arbitrary_state();
+    let id = ScanId::from_raw(kani::any());
+    let web: bool = kani::any();
+    let succeeded: bool = kani::any();
+    let opened = transition(
+        state,
+        Event::Open {
+            id,
+            kind: if web {
+                PayloadKind::WebUrl
+            } else {
+                PayloadKind::CopyOnly
+            },
+        },
+    );
+    let copied = transition(state, Event::Copy { id });
+    let finished = transition(state, Event::OpenFinished { id, succeeded });
+    let unchanged = Transition {
+        state,
+        effect: Effect::None,
+    };
+    assert_eq!(
+        opened,
+        if id == state.id && state.phase == Phase::Results && web {
+            Transition {
+                state: ScanState {
+                    phase: Phase::Opening,
+                    ..state
+                },
+                effect: Effect::OpenSelected,
+            }
+        } else {
+            unchanged
+        }
+    );
+    assert_eq!(
+        copied,
+        if id == state.id && state.phase == Phase::Results {
+            Transition {
+                state,
+                effect: Effect::CopySelected,
+            }
+        } else {
+            unchanged
+        }
+    );
+    assert_eq!(
+        finished,
+        if id == state.id && state.phase == Phase::Opening {
+            Transition {
+                state: ScanState {
+                    phase: if succeeded {
+                        Phase::Idle
+                    } else {
+                        Phase::Results
+                    },
+                    ..state
+                },
+                effect: if succeeded {
+                    Effect::Close
+                } else {
+                    Effect::PresentOpenFailure
+                },
+            }
+        } else {
+            unchanged
+        }
+    );
+    kani::cover!(
+        opened.effect == Effect::OpenSelected,
+        "confirmed opening makes progress"
+    );
+    kani::cover!(copied.effect == Effect::CopySelected, "copy makes progress");
+    kani::cover!(
+        finished.effect == Effect::PresentOpenFailure,
+        "failed opening preserves results"
+    );
+    kani::cover!(
+        finished.effect == Effect::Close,
+        "successful opening closes"
+    );
+}
+
+#[kani::proof]
+#[kani::unwind(9)]
+fn eight_event_traces_preserve_confirmation_and_generations() {
+    let mut state = arbitrary_state();
+    let mut previous_id = state.id;
+    for _ in 0..8 {
+        let event = match kani::any::<u8>() {
+            0 => Event::Begin,
+            1 => Event::Cancel,
+            choice => {
+                let id = if kani::any() { state.id } else { previous_id };
+                match choice {
+                    2 => Event::Completed {
+                        id,
+                        found: kani::any(),
+                    },
+                    3 => Event::Failed { id },
+                    4 => Event::Open {
+                        id,
+                        kind: if kani::any() {
+                            PayloadKind::WebUrl
+                        } else {
+                            PayloadKind::CopyOnly
+                        },
+                    },
+                    5 => Event::Copy { id },
+                    _ => Event::OpenFinished {
+                        id,
+                        succeeded: kani::any(),
+                    },
+                }
+            }
+        };
+        let result = transition(state, event);
+        assert!(result.state.id.raw() >= state.id.raw());
+        if result.state.id != state.id {
+            assert_eq!(event, Event::Begin);
+            assert_eq!(result.effect, Effect::Capture);
+        }
+        if result.effect == Effect::OpenSelected {
+            assert_eq!(state.phase, Phase::Results);
+            assert_eq!(
+                event,
+                Event::Open {
+                    id: state.id,
+                    kind: PayloadKind::WebUrl
+                }
+            );
+        }
+        if event == Event::Cancel {
+            assert_eq!(result.state.phase, Phase::Idle);
+            assert_eq!(result.state.id, state.id);
+        }
+        previous_id = state.id;
+        state = result.state;
+    }
+    kani::cover!(state.phase == Phase::Results, "trace can preserve results");
+    kani::cover!(
+        state.phase == Phase::Opening,
+        "trace can reach confirmed opening"
     );
 }
