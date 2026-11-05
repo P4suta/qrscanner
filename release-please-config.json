@@ -6,6 +6,7 @@
     ".": {
       "release-type": "simple",
       "package-name": "QRScanner",
+      "initial-version": "0.1.0",
       "bump-minor-pre-major": true,
       "extra-files": [
         {"type": "generic", "path": "crates/ffi/Cargo.toml"},
@@ -19,7 +20,7 @@
         {
           "type": "toml",
           "path": "Cargo.lock",
-          "jsonpath": "$.package[?(@.name == 'qrscanner-core' || @.name == 'qrscanner-ffi' || @.name == 'qrscanner-fuzz' || @.name == 'qrscanner-verification' || @.name == 'xtask')].version"
+          "jsonpath": "$.package[?(@.name.value == 'qrscanner-core' || @.name.value == 'qrscanner-ffi' || @.name.value == 'qrscanner-fuzz' || @.name.value == 'qrscanner-verification' || @.name.value == 'xtask')].version"
         },
         {
           "type": "yaml",
