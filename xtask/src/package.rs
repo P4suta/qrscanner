@@ -330,6 +330,11 @@ fn verify_distribution(app: &Path, disk: &Path) -> TaskResult<()> {
         "verify-final-dmg-ticket",
     )?;
     run(
+        "syspolicy_check",
+        &["distribution", "--json", text(app)?],
+        "distribution-policy-app",
+    )?;
+    run(
         "spctl",
         &["--assess", "--type", "execute", "--verbose=4", text(app)?],
         "gatekeeper-app",
@@ -390,14 +395,10 @@ fn verify_signer(app: &Path, team: &str, identity: &str) -> TaskResult<()> {
         .parent()
         .ok_or("Missing candidate directory")?
         .join("public-certificate-");
+    let extraction = format!("--extract-certificates={}", text(&prefix)?);
     run(
         "codesign",
-        &[
-            "--display",
-            "--extract-certificates",
-            text(&prefix)?,
-            text(app)?,
-        ],
+        &["--display", &extraction, text(app)?],
         "extract-public-certificate",
     )?;
     let certificate = format!("{}0", text(&prefix)?);

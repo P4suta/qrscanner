@@ -57,6 +57,7 @@ A pending submission remains unfinished.
 The same command resumes the preserved submission instead of rebuilding or replacing its archive.
 Rejected or mismatched receipts stop processing.
 After acceptance, packaging checks ticket code hashes, staples the app, creates and signs the disk image, and verifies its notarization, tickets, and Gatekeeper assessments.
+On the supported macOS 27 host, packaging also runs `syspolicy_check distribution` for the app, following [Apple's native distribution test guidance](https://developer.apple.com/forums/thread/130560).
 Candidate directories hold checksums, a software inventory, the lockfile, and source-bound evidence.
 Publishing remains a separate owner-authorized operation.
 
