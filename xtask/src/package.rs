@@ -194,8 +194,8 @@ pub(crate) fn package(inputs: Inputs, toolchain: Option<&str>) -> TaskResult<()>
     let architectures = String::from_utf8(architectures.stdout)?;
     let mut architectures: Vec<_> = architectures.split_whitespace().collect();
     architectures.sort_unstable();
-    if architectures != ["arm64", "x86_64"] {
-        return Err("The app must contain exactly arm64 and x86_64 slices".into());
+    if architectures != ["arm64"] {
+        return Err("The app must contain exactly an arm64 slice".into());
     }
     if let Some(identity) = identity {
         let team = inputs
@@ -562,7 +562,8 @@ fn notarize(
     let tickets = log["ticketContents"]
         .as_array()
         .ok_or("Notarization log has no ticket inventory")?;
-    for architecture in ["arm64", "x86_64"] {
+    {
+        let architecture = "arm64";
         let result = run(
             "codesign",
             &[
@@ -615,7 +616,7 @@ fn evidence(
         serde_json::to_vec_pretty(&json!({
             "product": "QRScanner", "version": env!("CARGO_PKG_VERSION"), "source_sha256": source,
             "unsigned_binary_sha256": binary, "artifact": filename, "artifact_sha256": digest,
-            "architectures": ["arm64", "x86_64"], "notarized": notarized,
+            "architectures": ["arm64"], "notarized": notarized,
             "distribution_ready": notarized
         }))?,
     )?;

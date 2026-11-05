@@ -10,7 +10,7 @@ publish.workspace = true
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
-qrscanner-core = { path = "../core", version = "=0.1.0" }
+qrscanner-core = { path = "../core", version = "=0.1.0" } # x-release-please-version
 
 [lints]
 workspace = true

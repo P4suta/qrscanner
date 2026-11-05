@@ -1,19 +1,19 @@
 # Development
 
-Build on macOS 26 or later with Xcode and the tools in `mise.toml`.
-The app targets macOS 26 and contains arm64 and x86_64 slices.
+Build on macOS 27 with Apple silicon, Xcode, and the tools in `mise.toml`.
+The app targets macOS 27 and contains only arm64 code.
 
 ```sh
 mise trust
 mise install
 mise x -- rustup component add rustfmt clippy
-mise x -- rustup target add aarch64-apple-darwin x86_64-apple-darwin
+mise x -- rustup target add aarch64-apple-darwin
 mise x -- cargo fetch --locked
 QRSCANNER_DEVELOPMENT_IDENTITY=YOUR_CERTIFICATE_SELECTOR mise x -- just app
 mise x -- just check
 ```
 
-`app` creates a sandboxed Universal app at `build/QRScanner.app` using the selected existing Apple Development identity.
+`app` creates a sandboxed arm64 app at `build/QRScanner.app` using the selected existing Apple Development identity.
 The identity is its exact public certificate selector, supplied through `QRSCANNER_DEVELOPMENT_IDENTITY`.
 Apple's [code identity requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements) explain why a stable development signature preserves privacy authorization across rebuilds.
 Use `mise x -- just app --ad-hoc` only for an ephemeral app whose rebuilt signature can require fresh Screen Recording authorization.
@@ -22,7 +22,7 @@ Open the app and choose Scan Screen from the menu bar or the result window.
 The interface uses system text styles and standard window controls.
 
 `check` runs Rust formatting, strict Clippy, Rust tests, dependency policy, the pinned advisory snapshot, and secret detection.
-On a Mac it also runs SwiftLint, a strict Universal Debug build, and native XCTest suites on the host architecture.
+On the supported Mac it also runs SwiftLint, a strict arm64 Debug build, and native XCTest suites.
 Checks inspect an isolated ad hoc bundle at `build/check/QRScanner.app` and refuse any change to the interactive app's contents or signature.
 The fast gate needs no private signing identity.
 The gate compares the String Catalog with compiler-extracted UI text and refuses missing or stale keys.
@@ -55,12 +55,10 @@ Proof and mutation containers have two CPUs, 2048 MiB of memory, no swap, 256 pr
 A checkout-specific Docker volume keeps Linux compiler caches apart from native Mac caches and shared-directory filesystem behavior.
 A safety stop is inconclusive and creates no passing receipt.
 
-The release gate runs fast checks, a Universal Release build, and optimized native tests on both architectures.
+The release gate runs fast checks, an arm64 Release build, and optimized arm64 native tests.
 It repeats the native suites with AddressSanitizer and ThreadSanitizer instrumentation.
 It runs every declared Kani harness, the rejecting automatic-open assertion, seven production fault controls, and the full scan, foreign-interface, and verification-policy mutation inventory.
 It also replays the committed parser corpus and runs a fixed libFuzzer campaign in the bounded container.
-An Apple silicon Mac executes the Intel runner through Rosetta.
-The Intel runner records execution of Intel code without claiming physical Intel hardware acceptance.
 Use `just proofs` or `just mutants` for the same bounded campaigns on demand.
 Use `mise x -- just mutation-plan` to inspect the complete selected mutation inventory without running mutations.
 Use `mise x -- just fuzz` for the same parser campaign on demand.

@@ -1,0 +1,62 @@
+name: Release proposal
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  proposal:
+    name: Prepare release proposal
+    if: github.ref == 'refs/heads/main' && vars.RELEASE_PROPOSALS_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release-please
+    permissions:
+      contents: read
+      id-token: write # Authenticate to the proposal-only Doppler identity.
+    steps:
+      - name: Fetch proposal credentials
+        id: credentials
+        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534
+        with:
+          auth-method: oidc
+          doppler-identity-id: ${{ vars.DOPPLER_AUTOMATION_IDENTITY_ID }}
+          doppler-project: qrscanner
+          doppler-config: automation
+          inject-env-vars: false
+      - name: Require proposal credentials
+        env:
+          APP_CLIENT_ID: ${{ steps.credentials.outputs.GITHUB_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ steps.credentials.outputs.GITHUB_APP_PRIVATE_KEY }}
+        run: |
+          test -n "$APP_CLIENT_ID"
+          test -n "$APP_PRIVATE_KEY"
+          case "$APP_CLIENT_ID$APP_PRIVATE_KEY" in
+            *\$\{*) exit 1 ;;
+          esac
+      - name: Create repository token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          client-id: ${{ steps.credentials.outputs.GITHUB_APP_CLIENT_ID }}
+          private-key: ${{ steps.credentials.outputs.GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+      - name: Prepare version and changelog PR
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
+        with:
+          token: ${{ steps.app.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true

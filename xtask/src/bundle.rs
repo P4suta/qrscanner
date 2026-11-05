@@ -28,8 +28,11 @@ pub(crate) fn inspect(app: &Path, signed: bool) -> TaskResult<()> {
         );
     }
     let info = plist(&app.join("Contents/Info.plist"), "bundle-info")?;
-    if info["LSMinimumSystemVersion"] != "26.0" || info["LSUIElement"] != true {
-        return Err("The bundle must target macOS 26 as a menu bar app".into());
+    if info["LSMinimumSystemVersion"] != "27.0" || info["LSUIElement"] != true {
+        return Err("The bundle must target macOS 27 as a menu bar app".into());
+    }
+    if info["CFBundleShortVersionString"] != env!("CARGO_PKG_VERSION") {
+        return Err("The app version differs from the Rust workspace version".into());
     }
     if !resources.join("en.lproj/Localizable.stringsdict").is_file() {
         return Err("The bundle lacks compiled English plural rules".into());
@@ -43,8 +46,8 @@ pub(crate) fn inspect(app: &Path, signed: bool) -> TaskResult<()> {
     let text = String::from_utf8(architectures.stdout)?;
     let mut architectures: Vec<_> = text.split_whitespace().collect();
     architectures.sort_unstable();
-    if architectures != ["arm64", "x86_64"] {
-        return Err("The app must contain exactly arm64 and x86_64".into());
+    if architectures != ["arm64"] {
+        return Err("The app must contain exactly arm64".into());
     }
     if signed {
         let output = run(

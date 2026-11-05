@@ -144,7 +144,7 @@ fn invoke_with_environment(
     println!("[qrscanner] {log_name}");
     let output = Command::new(program)
         .args(args)
-        .env("MACOSX_DEPLOYMENT_TARGET", "26.0")
+        .env("MACOSX_DEPLOYMENT_TARGET", "27.0")
         .env("CARGO_NET_OFFLINE", "true")
         .env("TMPDIR", std::env::current_dir()?.join("build/tmp"))
         .envs(environment.iter().copied())
@@ -192,33 +192,27 @@ fn build_native(configuration: &str, toolchain: Option<&str>) -> TaskResult<()> 
         "render-icon",
     )?;
     icon::package()?;
-    for target in ["aarch64-apple-darwin", "x86_64-apple-darwin"] {
-        cargo(
-            &[
-                "build",
-                "--offline",
-                "--locked",
-                "--release",
-                "-p",
-                "qrscanner-ffi",
-                "--target",
-                target,
-            ],
-            &format!("rust-{target}"),
-            toolchain,
-        )?;
-    }
-    run(
-        "xcrun",
+    cargo(
         &[
-            "lipo",
-            "-create",
+            "build",
+            "--offline",
+            "--locked",
+            "--release",
+            "-p",
+            "qrscanner-ffi",
+            "--target",
+            "aarch64-apple-darwin",
+        ],
+        "rust-aarch64-apple-darwin",
+        toolchain,
+    )?;
+    run(
+        "ditto",
+        &[
             "target/aarch64-apple-darwin/release/libqrscanner_ffi.a",
-            "target/x86_64-apple-darwin/release/libqrscanner_ffi.a",
-            "-output",
             "build/rust/lib/libqrscanner_ffi.a",
         ],
-        "universal-core",
+        "stage-core",
     )?;
     run(
         "xcodegen",
@@ -238,7 +232,7 @@ fn build_native(configuration: &str, toolchain: Option<&str>) -> TaskResult<()> 
             "-derivedDataPath",
             "build/xcode",
             "CODE_SIGNING_ALLOWED=NO",
-            "ARCHS=arm64 x86_64",
+            "ARCHS=arm64",
             "ONLY_ACTIVE_ARCH=NO",
         ],
         &format!("native-{configuration}"),
@@ -248,6 +242,7 @@ fn build_native(configuration: &str, toolchain: Option<&str>) -> TaskResult<()> 
 
 fn check(toolchain: Option<&str>) -> TaskResult<()> {
     let interactive = local_app::interactive_fingerprint()?;
+    run("actionlint", &[], "workflow-lint")?;
     cargo(&["fmt", "--all", "--", "--check"], "rust-format", toolchain)?;
     cargo(
         &[
@@ -411,7 +406,7 @@ fn native_tests(
     sources.sort();
     sources.push("native/Tools/TestRunner.swift".to_owned());
     let mut failures = Vec::new();
-    for architecture in ["arm64", "x86_64"] {
+    for architecture in ["arm64"] {
         if !all_architectures
             && architecture
                 != if cfg!(target_arch = "aarch64") {
@@ -422,7 +417,7 @@ fn native_tests(
         {
             continue;
         }
-        let target = format!("{architecture}-apple-macos26.0");
+        let target = format!("{architecture}-apple-macos27.0");
         let mode = match instrumentation {
             Instrumentation::Plain => {
                 if release {

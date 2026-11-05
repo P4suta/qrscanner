@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "6eb1fd29259106a76feb5f4e3692631cbd82fe77",
+  "include-component-in-tag": false,
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "QRScanner",
+      "bump-minor-pre-major": true,
+      "extra-files": [
+        {"type": "generic", "path": "crates/ffi/Cargo.toml"},
+        {"type": "generic", "path": "fuzz/Cargo.toml"},
+        {"type": "generic", "path": "xtask/Cargo.toml"},
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "jsonpath": "$.workspace.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "Cargo.lock",
+          "jsonpath": "$.package[?(@.name == 'qrscanner-core' || @.name == 'qrscanner-ffi' || @.name == 'qrscanner-fuzz' || @.name == 'qrscanner-verification' || @.name == 'xtask')].version"
+        },
+        {
+          "type": "yaml",
+          "path": "project.yml",
+          "jsonpath": "$.settings.base.MARKETING_VERSION"
+        },
+        {
+          "type": "yaml",
+          "path": "project.yml",
+          "jsonpath": "$.targets.QRScanner.info.properties.CFBundleShortVersionString"
+        }
+      ]
+    }
+  }
+}

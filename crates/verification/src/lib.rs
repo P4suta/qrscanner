@@ -79,11 +79,10 @@ pub fn mutations_complete(counts: MutationCounts) -> bool {
 pub struct AcceptanceFacts {
     pub identities_match: bool,
     pub arm64_session: bool,
-    pub x86_64_session: bool,
 }
 
 pub const fn acceptance_complete(facts: AcceptanceFacts) -> bool {
-    facts.identities_match && facts.arm64_session && facts.x86_64_session
+    facts.identities_match && facts.arm64_session
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -102,11 +101,11 @@ pub const fn counterexample_rejected(facts: CounterexampleFacts) -> bool {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct MacOS26<'a>(&'a [u8]);
+pub struct MacOS27<'a>(&'a [u8]);
 
-impl<'a> MacOS26<'a> {
+impl<'a> MacOS27<'a> {
     pub fn parse(version: &'a [u8]) -> Option<Self> {
-        let [b'2', b'6', b'.', tail @ ..] = version else {
+        let [b'2', b'7', b'.', tail @ ..] = version else {
             return None;
         };
         let mut has_digit = false;

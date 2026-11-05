@@ -13,7 +13,7 @@ The foreign interface validates wire tags and Boolean fields before constructing
 The value-only `C ABI` preserves its existing layout and transition behavior.
 Kani imports production functions to check complete single-step outcomes, confirmed opening, stale events, cancellation, generation overflow, wire validation, icon lengths, notarization identity, and the release gate's required facts.
 The wire refinement uses a numeric specification independent of the production encoder and decoder.
-Native tests check the header constants, record sizes, alignments, field offsets, and transition matrix on both architecture slices.
+Native tests check the header constants, record sizes, alignments, field offsets, and transition matrix on arm64.
 
 Single-step scan and wire proofs quantify every admitted phase, event, 64-bit generation, and raw 32-bit wire field.
 A bounded proof explores eight events with current and previous generations and checks monotonic generations and confirmed opening at every step.
@@ -46,7 +46,7 @@ The signed app's migration and sandbox behavior still need live acceptance.
 ## Verification and evidence
 
 `mise x -- just check` runs the fast contributor gate.
-`mise x -- just verify-release` runs optimized native suites on both architectures, AddressSanitizer and ThreadSanitizer suites, every production Kani harness and its rejecting controls, and the complete scan, foreign-interface, and verification-policy mutation inventory.
+`mise x -- just verify-release` runs optimized arm64 native suites, AddressSanitizer and ThreadSanitizer suites, every production Kani harness and its rejecting controls, and the complete scan, foreign-interface, and verification-policy mutation inventory.
 Missing, empty, failed, timed-out, and incomplete required work creates no completed release receipt.
 The runner records source, tools, target semantics, logs, executable, and resource identities.
 Tests reject missing checks, duplicate checks, changed sources, changed binaries, and incorrect acceptance records.
@@ -70,7 +70,7 @@ The fixed campaign adds sampled execution beyond the parser proof's 32-byte boun
 [The Rust Fuzz Book](https://rust-fuzz.github.io/book/cargo-fuzz/tutorial.html) describes target execution, and [the libFuzzer reference documents the run count and input bounds](https://llvm.org/docs/LibFuzzer.html#options).
 
 The native runner prohibits app activation and keeps fixture windows offscreen.
-The sanitizer variants instrument owned Swift production and test code and execute the same nonempty suites on arm64 and x86_64.
+The sanitizer variants instrument owned Swift production and test code and execute the same nonempty suites on arm64.
 The linked Rust archive, Apple frameworks, and system services remain outside that instrumentation.
 Leak detection isn't part of the AddressSanitizer contract.
 [Swift's sanitizer guidance](https://www.swift.org/documentation/server/guides/llvm-sanitizers.html) describes the compiler instrumentation.
@@ -85,6 +85,6 @@ Generated PNGs remain under `build/ui-review/` for visual inspection.
 
 Screen Recording consent, display fidelity, protected content, app exclusion, and full-screen Spaces require a normal login session.
 The same applies to browser launching, clipboard access, sandbox relaunch, VoiceOver, and system accessibility preferences.
-The release acceptance record requires macOS 26 observations for both architecture slices.
+The release acceptance record requires macOS 27 arm64 observations.
 Evidence from a newer OS remains evidence for that OS.
 No release or notarization follows from a passing development test.
