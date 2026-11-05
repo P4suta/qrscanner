@@ -35,6 +35,8 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'mise.toml') }}
       - name: Install verification tools
         run: mise install rust just cargo:cargo-deny cargo:cargo-audit gitleaks
+      - name: Install Rust components
+        run: mise x -- rustup component add rustfmt clippy
       - name: Fetch locked dependencies
         run: mise x -- cargo fetch --locked
       - name: Check

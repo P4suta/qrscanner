@@ -6,6 +6,7 @@ The app targets macOS 26 and contains arm64 and x86_64 slices.
 ```sh
 mise trust
 mise install
+mise x -- rustup component add rustfmt clippy
 mise x -- rustup target add aarch64-apple-darwin x86_64-apple-darwin
 mise x -- cargo fetch --locked
 QRSCANNER_DEVELOPMENT_IDENTITY=YOUR_CERTIFICATE_SELECTOR mise x -- just app
