@@ -3,7 +3,7 @@ import os
 
 enum ProcessingLog {
     enum Stage: String {
-        case scan, capture, recognition, permission, open, copy, relaunch, shortcut, migration
+        case scan, capture, recognition, permission, open, copy, relaunch, migration
     }
 
     enum Outcome: String {

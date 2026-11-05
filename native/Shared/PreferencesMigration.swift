@@ -24,19 +24,6 @@ enum PreferencesMigration {
 
     static func apply(_ imported: [String: Any], to defaults: UserDefaults) {
         guard !defaults.bool(forKey: marker) else { return }
-        let keys = ["shortcut.code", "shortcut.modifiers", "shortcut.label"]
-        if keys.allSatisfy({ defaults.object(forKey: $0) == nil }),
-           let code = imported["shortcut.code"] as? NSNumber,
-           let modifiers = imported["shortcut.modifiers"] as? NSNumber,
-           CFGetTypeID(code) != CFBooleanGetTypeID(), CFGetTypeID(modifiers) != CFBooleanGetTypeID(),
-           code.int64Value >= 0, modifiers.int64Value >= 0,
-           let exactCode = UInt32(exactly: code.doubleValue), let exactModifiers = UInt(exactly: modifiers.doubleValue),
-           let label = imported["shortcut.label"] as? String,
-           KeyboardShortcut(keyCode: exactCode, modifiers: exactModifiers, keyLabel: label).isValid {
-            defaults.set(exactCode, forKey: keys[0])
-            defaults.set(exactModifiers, forKey: keys[1])
-            defaults.set(label, forKey: keys[2])
-        }
         for key in ["hasShownWelcome", "screenAccess.requested"] where defaults.object(forKey: key) == nil {
             if let value = imported[key] as? NSNumber, CFGetTypeID(value) == CFBooleanGetTypeID() {
                 defaults.set(value.boolValue, forKey: key)

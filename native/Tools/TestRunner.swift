@@ -7,7 +7,7 @@ struct NativeTestRunner {
     static func main() {
         let suite = XCTestSuite(name: "QRScanner native verification")
         let suites = [PayloadTests.defaultTestSuite, CoreBridgeTests.defaultTestSuite, AppModelTests.defaultTestSuite,
-                      QRDecoderTests.defaultTestSuite, KeyboardShortcutTests.defaultTestSuite, InterfaceTests.defaultTestSuite,
+                      QRDecoderTests.defaultTestSuite, InterfaceTests.defaultTestSuite,
                       ResultPanelTests.defaultTestSuite, ScreenCaptureTests.defaultTestSuite,
                       PreferencesMigrationTests.defaultTestSuite, AppDelegateTests.defaultTestSuite]
         suites.forEach(suite.addTest)

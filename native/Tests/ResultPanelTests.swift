@@ -9,6 +9,25 @@ private struct PanelTestScanner: ScreenScanning {
 
 @MainActor
 final class ResultPanelTests: XCTestCase {
+    func testWindowControlsKeepStandardSystemMetrics() throws {
+        _ = NSApplication.shared
+        let rectangle = NSRect(x: 0, y: 0, width: 480, height: 200)
+        let panel = ResultPanel.make(contentRect: rectangle)
+        let reference = NSWindow(contentRect: rectangle,
+                                 styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                                 backing: .buffered, defer: false)
+        panel.isReleasedWhenClosed = false
+        reference.isReleasedWhenClosed = false
+        defer { panel.close(); reference.close() }
+        XCTAssertFalse(panel.styleMask.contains(.utilityWindow))
+        for kind in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            let actual = try XCTUnwrap(panel.standardWindowButton(kind))
+            let expected = try XCTUnwrap(reference.standardWindowButton(kind))
+            XCTAssertEqual(actual.frame.size, expected.frame.size)
+            XCTAssertEqual(actual.frame.origin.y, expected.frame.origin.y)
+        }
+    }
+
     func testReturnInReadOnlyTextOpensTheSelectedLink() throws {
         var opened: [String] = []
         let value = "https://example.org/form?source=qr#details"

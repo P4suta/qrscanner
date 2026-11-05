@@ -102,7 +102,7 @@ fn restarted_scan_rejects_previous_generation() {
 }
 
 #[test]
-fn repeated_shortcuts_do_not_start_parallel_scans() {
+fn repeated_requests_do_not_start_parallel_scans() {
     let state = scanning();
     let result = transition(state, Event::Begin);
     assert_eq!(result.state, state);

@@ -3,7 +3,6 @@ import SwiftUI
 
 struct ResultView: View {
     @ObservedObject var model: AppModel
-    var shortcut: String? = KeyboardShortcut.defaultValue.display
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -15,7 +14,7 @@ struct ResultView: View {
                 scanContent
             }
         }
-        .appFont(.body)
+        .font(.body)
         .padding(20)
         .frame(minWidth: 320, idealWidth: 480, maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
@@ -29,8 +28,6 @@ struct ResultView: View {
         if model.state.phase == QR_PHASE_IDLE {
             status("Scan QR codes on your screen", symbol: "qrcode.viewfinder",
                    message: "Show a QR code on any display, then scan to open its link or copy its text.")
-            Text(shortcut.map { String(localized: "Scan from anywhere with \($0).") } ?? String(localized: "Use Scan Screen in the menu bar."))
-                .appFont(.callout).foregroundStyle(.secondary)
             actions { NativeActionButton("Scan Screen", primary: true, action: model.scan) }
         } else if model.state.phase == QR_PHASE_SCANNING {
             HStack(spacing: 12) {
@@ -64,9 +61,8 @@ struct ResultView: View {
     @ViewBuilder private var results: some View {
         if model.payloads.count > 1 {
             Text(AppStrings.resultCount(model.payloads.count))
-                .appFont(.headline)
+                .font(.headline)
             ResultList(payloads: model.payloads, selection: $model.selection)
-                .frame(height: min(CGFloat(model.payloads.count) * 49, 196))
         }
         if let payload = model.selectedPayload {
             if payload.text.isEmpty {
@@ -95,17 +91,17 @@ struct ResultView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: payload.webURL == nil ? "text.alignleft" : "link")
-                    .appFont(.title2).foregroundStyle(.tint)
+                    .font(.title2).foregroundStyle(.tint)
                     .frame(width: 24).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     if payload.webURL != nil {
                         Text(model.payloads.count > 1 ? String(localized: "Selected link") : String(localized: "Link"))
-                            .appFont(.callout).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.secondary)
                     } else if URLComponents(string: payload.text)?.scheme != nil {
-                        Text("QR Code Content").appFont(.callout).foregroundStyle(.secondary)
+                        Text("QR Code Content").font(.callout).foregroundStyle(.secondary)
                     }
                     Text(payload.host ?? String(localized: "Text"))
-                        .appFont(.title3).fontWeight(.bold)
+                        .font(.title3).fontWeight(.bold)
                         .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
                 }
@@ -126,7 +122,7 @@ struct ResultView: View {
             status("Turn on screen access", symbol: "lock.rectangle",
                    message: "In System Settings, open Privacy & Security → Screen & System Audio Recording, then enable QRScanner.")
             Text("If macOS asks you to reopen the app, choose Quit & Reopen.")
-                .appFont(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
             if let message = model.permissionError { errorMessage(message) }
             actions {
                 NativeActionButton("Try Again", action: model.retryScreenAccess)
@@ -176,8 +172,8 @@ struct ResultView: View {
 
     private func status(_ title: LocalizedStringResource, symbol: String, message: LocalizedStringResource) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Image(systemName: symbol).appFont(.largeTitle).foregroundStyle(.tint).accessibilityHidden(true)
-            Text(title).appFont(.title3).fontWeight(.bold)
+            Image(systemName: symbol).font(.largeTitle).foregroundStyle(.tint).accessibilityHidden(true)
+            Text(title).font(.title3).fontWeight(.bold)
             Text(message).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -185,7 +181,7 @@ struct ResultView: View {
 
     private func errorMessage(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.circle")
-            .appFont(.body).foregroundStyle(.primary)
+            .font(.body).foregroundStyle(.primary)
             .fixedSize(horizontal: false, vertical: true)
     }
 

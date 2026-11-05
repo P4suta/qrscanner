@@ -21,12 +21,12 @@ The Rust state machine and value-only `C ABI` already express confirmation and c
 Target macOS 26 and keep arm64 and x86_64 in one Universal app.
 Use [captureScreenshot](https://developer.apple.com/documentation/screencapturekit/scscreenshotmanager/capturescreenshot(contentfilter:configuration:completionhandler:)) and [SCScreenshotConfiguration](https://developer.apple.com/documentation/screencapturekit/scscreenshotconfiguration), both introduced in macOS 26.
 Request standard dynamic range images in memory with Retina pixel dimensions and exclude QRScanner on every display.
-Keep the capture-aware result panel in AppKit and use [SwiftUI Settings](https://developer.apple.com/documentation/swiftui/settings) for settings-window ownership.
+Keep the capture-aware result panel in AppKit with standard window chrome and button-driven actions.
 
 Enable [App Sandbox](https://developer.apple.com/documentation/security/app-sandbox) without networking, audio, camera, or broad file-access entitlements.
 Apple requires sandboxing for Mac App Store distribution.
 Sandboxing for this Developer ID app is a project choice.
-Use the [container migration manifest](https://developer.apple.com/documentation/security/migrating-your-app-s-files-to-its-app-sandbox-container) and an idempotent importer to preserve valid shortcut and welcome preferences.
+Use the [container migration manifest](https://developer.apple.com/documentation/security/migrating-your-app-s-files-to-its-app-sandbox-container) and an idempotent importer to preserve welcome and permission-request flags.
 
 Bundle a no-collection privacy manifest as a project choice.
 Apple's [privacy manifest scope](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files) covers data-collection information on all platforms and names iOS, iPadOS, tvOS, visionOS, and watchOS for required-reason API declarations.

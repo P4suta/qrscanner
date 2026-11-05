@@ -1,10 +1,10 @@
-set shell := ["zsh", "-cu"]
+set shell := ["sh", "-eu", "-c"]
 
 default:
     @just --list
 
-app:
-    cargo run --offline --locked -p xtask -- app
+app *args:
+    cargo run --offline --locked -p xtask -- app {{ args }}
 
 check:
     cargo run --offline --locked -p xtask -- check

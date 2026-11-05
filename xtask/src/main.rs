@@ -7,6 +7,7 @@ mod acceptance;
 mod assurance;
 mod bundle;
 mod icon;
+mod local_app;
 mod localization;
 mod package;
 mod release_rules;
@@ -55,8 +56,14 @@ fn execute() -> TaskResult<()> {
     }
     match args.first().map(String::as_str) {
         Some("app") => {
+            let ad_hoc = match args.get(1).map(String::as_str) {
+                None => false,
+                Some("--ad-hoc") if args.len() == 2 => true,
+                _ => return Err("Usage: just app [--ad-hoc]".into()),
+            };
+            let identity = local_app::interactive_identity(ad_hoc)?;
             build_native("Debug", toolchain.as_deref())?;
-            copy_app("Debug")?;
+            local_app::stage("Debug", local_app::Artifact::Interactive, &identity)?;
             println!("Built {}", root.join("build/QRScanner.app").display());
             Ok(())
         }
@@ -234,34 +241,8 @@ fn build_native(configuration: &str, toolchain: Option<&str>) -> TaskResult<()> 
     Ok(())
 }
 
-fn copy_app(configuration: &str) -> TaskResult<()> {
-    if Path::new("build/QRScanner.app").exists() {
-        fs::remove_dir_all("build/QRScanner.app")?;
-    }
-    let product = format!("build/xcode/Build/Products/{configuration}/QRScanner.app");
-    run("ditto", &[&product, "build/QRScanner.app"], "copy-app")?;
-    run(
-        "codesign",
-        &[
-            "--force",
-            "--sign",
-            "-",
-            "--entitlements",
-            "native/Resources/QRScanner.entitlements",
-            "build/QRScanner.app",
-        ],
-        "local-signature",
-    )?;
-    run(
-        "codesign",
-        &["--verify", "--deep", "--strict", "build/QRScanner.app"],
-        "verify-local-signature",
-    )?;
-    bundle::inspect(Path::new("build/QRScanner.app"), true)?;
-    Ok(())
-}
-
 fn check(toolchain: Option<&str>) -> TaskResult<()> {
+    let interactive = local_app::interactive_fingerprint()?;
     cargo(&["fmt", "--all", "--", "--check"], "rust-format", toolchain)?;
     cargo(
         &[
@@ -302,7 +283,10 @@ fn check(toolchain: Option<&str>) -> TaskResult<()> {
         build_native("Debug", toolchain)?;
         localization::sync(true)?;
         native_tests(false, false)?;
-        copy_app("Debug")?;
+        local_app::stage("Debug", local_app::Artifact::Verification, "-")?;
+    }
+    if interactive != local_app::interactive_fingerprint()? {
+        return Err("Verification changed the interactive app or its signing identity".into());
     }
     println!("[qrscanner] fast checks passed");
     Ok(())

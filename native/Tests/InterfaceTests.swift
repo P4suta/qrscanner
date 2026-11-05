@@ -1,41 +1,46 @@
 import AppKit
-import Carbon
 import SwiftUI
 import XCTest
 
 @MainActor
 final class InterfaceTests: XCTestCase {
-    func testNarrowWindowsKeepActionsVisibleAtTwoHundredPercentText() throws {
+    func testShortResultListsShowEveryRowWithoutClipping() throws {
         _ = NSApplication.shared
-        for fixture in [InterfaceFixture.link, .multiple, .recovery, .openFailure, .longLink] {
-            let model = fixture.model(defaults: try isolatedDefaults())
-            defer { model.cancel() }
-            let window = try render(ResultView(model: model).environment(\.appTextScale, 2), width: 320,
-                                    appearance: .aqua, scheme: .light, name: "large-text/\(fixture.rawValue)-320")
-            defer { window.close() }
-            let host = try XCTUnwrap(window.contentView)
-            let buttons = try verifyButtons(in: host)
-            XCTAssertTrue(buttons.allSatisfy { $0.bounds.height >= 28 })
-            for button in buttons {
-                let font = try XCTUnwrap(button.font)
-                XCTAssertGreaterThanOrEqual(button.bounds.height, ceil(font.ascender - font.descender + font.leading) + 8)
-            }
-            for editor in descendants(of: host).compactMap({ $0 as? PayloadTextEditor }) {
-                XCTAssertEqual(editor.font?.pointSize ?? 0, NSFont.preferredFont(forTextStyle: .body).pointSize * 2, accuracy: 0.1)
+        for appearance in InterfaceAppearance.allCases {
+            for width: CGFloat in [320, 480] {
+                let model = InterfaceFixture.twoResults.model(defaults: try isolatedDefaults())
+                defer { model.cancel() }
+                let window = try render(ResultView(model: model), width: width, appearance: appearance.native,
+                                        scheme: appearance.scheme, name: "\(appearance.rawValue)/two-results-\(Int(width))")
+                defer { window.close() }
+                let host = try XCTUnwrap(window.contentView)
+                let table = try XCTUnwrap(descendants(of: host).compactMap { $0 as? NSTableView }.first)
+                XCTAssertEqual(table.numberOfRows, model.payloads.count)
+                let clip = try XCTUnwrap(table.enclosingScrollView?.contentView)
+                for row in 0..<table.numberOfRows {
+                    let rect = table.convert(table.rect(ofRow: row), to: clip)
+                    XCTAssertTrue(clip.bounds.insetBy(dx: -0.5, dy: -0.5).contains(rect), "Clipped result row \(row): \(rect), viewport \(clip.bounds)")
+                }
             }
         }
     }
 
-    func testNarrowSettingsKeepRecorderAndActionsVisibleWithEnlargedText() throws {
+    func testNarrowWindowsKeepStandardActionsVisible() throws {
         _ = NSApplication.shared
-        for fixture in InterfaceSettingsFixture.allCases {
-            let manager = fixture.manager(defaults: try isolatedDefaults())
-            defer { manager.stop() }
-            let window = try render(SettingsView(hotKey: manager).environment(\.appTextScale, 2), width: 320,
-                                    appearance: .darkAqua, scheme: .dark, name: "large-text/settings-\(fixture.rawValue)-320")
+        for fixture in [InterfaceFixture.link, .multiple, .recovery, .openFailure, .longLink] {
+            let model = fixture.model(defaults: try isolatedDefaults())
+            defer { model.cancel() }
+            let window = try render(ResultView(model: model), width: 320,
+                                    appearance: .aqua, scheme: .light, name: "narrow/\(fixture.rawValue)-320")
             defer { window.close() }
             let host = try XCTUnwrap(window.contentView)
-            _ = try verifyButtons(in: host)
+            let buttons = try verifyButtons(in: host)
+            for button in buttons {
+                XCTAssertEqual(button.bounds.height, button.fittingSize.height, accuracy: 0.5)
+            }
+            for editor in descendants(of: host).compactMap({ $0 as? PayloadTextEditor }) {
+                XCTAssertEqual(editor.font?.pointSize ?? 0, NSFont.preferredFont(forTextStyle: .body).pointSize, accuracy: 0.1)
+            }
         }
     }
 
@@ -77,33 +82,6 @@ final class InterfaceTests: XCTestCase {
         }
     }
 
-    func testSettingsStatesRenderTheActualRecorderAndAvailableActions() throws {
-        _ = NSApplication.shared
-        for appearance in InterfaceAppearance.allCases {
-            for fixture in InterfaceSettingsFixture.allCases {
-                let manager = fixture.manager(defaults: try isolatedDefaults())
-                defer { manager.stop() }
-                let window = try render(SettingsView(hotKey: manager), width: 480, appearance: appearance.native,
-                                        scheme: appearance.scheme, name: "\(appearance.rawValue)/settings-\(fixture.rawValue)")
-                defer { window.close() }
-                let host = try XCTUnwrap(window.contentView)
-                let buttons = try verifyButtons(in: host)
-                let recorder = try XCTUnwrap(descendants(of: host).compactMap { $0 as? NSButton }
-                    .first { $0.accessibilityIdentifier() == "shortcutRecorder" })
-                XCTAssertEqual(recorder.title, manager.recorderTitle)
-                XCTAssertEqual(recorder.accessibilityValue() as? String, manager.recorderTitle)
-                XCTAssertEqual(recorder.accessibilityHelp(), manager.helperText)
-                XCTAssertEqual(recorder.bounds.width, 144, accuracy: 0.5)
-                if fixture == .idle || fixture == .custom {
-                    let restore = try XCTUnwrap(buttons.first { buttonLabel($0) == "Restore Default" })
-                    XCTAssertEqual(restore.isAccessibilityEnabled(), fixture == .custom)
-                } else {
-                    XCTAssertTrue(buttons.contains { buttonLabel($0) == "Cancel" })
-                }
-            }
-        }
-    }
-
     func testPayloadEditorPreservesUnicodeAndUsesPayloadCopyWithoutSelection() throws {
         _ = NSApplication.shared
         let value = "First line\n\(QRFixtures.greekGreeting) — 日本語 — 👩🏽\u{200D}💻\nLast line"
@@ -122,46 +100,6 @@ final class InterfaceTests: XCTestCase {
         editor.copy(nil)
         XCTAssertEqual(copies, 1)
         XCTAssertEqual(editor.string, value)
-    }
-
-    func testLiveSettingsHostGrowsForFailureAndShrinksAfterCancellation() throws {
-        _ = NSApplication.shared
-        for appearance in InterfaceAppearance.allCases {
-            let manager = InterfaceSettingsFixture.idle.manager(defaults: try isolatedDefaults())
-            defer { manager.stop() }
-            let window = try render(SettingsView(hotKey: manager), width: 480, appearance: appearance.native,
-                                    scheme: appearance.scheme, name: "\(appearance.rawValue)/settings-live-idle")
-            defer { window.close() }
-            let host = try XCTUnwrap(window.contentView)
-            let initialHeight = host.bounds.height
-            let liveRecorder = try XCTUnwrap(descendants(of: host).compactMap { $0 as? NSButton }
-                .first { $0.accessibilityIdentifier() == "shortcutRecorder" })
-            liveRecorder.performClick(nil)
-            XCTAssertEqual(liveRecorder.title, manager.recorderTitle)
-            XCTAssertEqual(liveRecorder.accessibilityHelp(), manager.helperText)
-            XCTAssertFalse(manager.update(KeyboardShortcut(keyCode: UInt32(kVK_Space),
-                                                           modifiers: KeyboardShortcut.defaultValue.modifiers, keyLabel: "Space")))
-            let failureHeight = try fit(window)
-            XCTAssertTrue(window.contentView === host)
-            XCTAssertGreaterThan(failureHeight, initialHeight)
-            let failureButtons = try verifyButtons(in: host)
-            XCTAssertTrue(failureButtons.contains { buttonLabel($0) == "Try Another Shortcut" })
-            let recorder = try XCTUnwrap(failureButtons.first { $0.accessibilityIdentifier() == "shortcutRecorder" })
-            XCTAssertEqual(recorder.bounds.width, 144, accuracy: 0.5)
-            XCTAssertEqual(recorder.title, manager.recorderTitle)
-            XCTAssertEqual(recorder.accessibilityValue() as? String, manager.recorderTitle)
-            XCTAssertEqual(recorder.accessibilityHelp(), manager.helperText)
-            try writeImage(of: window, name: "\(appearance.rawValue)/settings-live-unavailable")
-            manager.cancelRecording()
-            XCTAssertEqual(try fit(window), initialHeight, accuracy: 0.5)
-            XCTAssertTrue(window.contentView === host)
-            let restore = try XCTUnwrap(verifyButtons(in: host).first { buttonLabel($0) == "Restore Default" })
-            XCTAssertFalse(restore.isAccessibilityEnabled())
-            XCTAssertEqual(recorder.title, manager.recorderTitle)
-            XCTAssertEqual(recorder.accessibilityValue() as? String, manager.recorderTitle)
-            XCTAssertEqual(recorder.accessibilityHelp(), manager.helperText)
-            try writeImage(of: window, name: "\(appearance.rawValue)/settings-live-restored")
-        }
     }
 
     private func isolatedDefaults() throws -> UserDefaults {
@@ -203,10 +141,9 @@ final class InterfaceTests: XCTestCase {
 
     private func render<Content: View>(_ content: Content, width: CGFloat, appearance: NSAppearance.Name,
                                        scheme: ColorScheme, name: String, hidesWindowControls: Bool = false) throws -> NSWindow {
-        let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: width, height: 600),
-                             styleMask: [.titled, .closable, .miniaturizable, .resizable, .utilityWindow], backing: .buffered, defer: false)
+        let window = ResultPanel.make(contentRect: NSRect(x: 0, y: 0, width: width, height: 600))
         window.isReleasedWhenClosed = false
-        window.title = name.contains("settings") ? "Settings" : "QRScanner"
+        window.title = "QRScanner"
         window.appearance = try XCTUnwrap(NSAppearance(named: appearance))
         let host = NSHostingView(rootView: content.environment(\.colorScheme, scheme).frame(width: width))
         host.sizingOptions = [.intrinsicContentSize]

@@ -1,5 +1,4 @@
 import AppKit
-import Carbon
 import SwiftUI
 
 enum InterfaceAppearance: String, CaseIterable {
@@ -18,7 +17,7 @@ private struct InterfaceScanner: ScreenScanning {
 enum InterfaceFixture: String, CaseIterable {
     case welcome, permission, recovery, scanning, link, multiple, text, empty
     case noResults, unreadable, scanFailure, openFailure, copyFailure
-    case longLink, unicode, manyResults, mixedText, permissionReady, relaunchRequired
+    case longLink, unicode, manyResults, mixedText, twoResults, permissionReady, relaunchRequired
 
     static let exampleURL = "https://example.org/event/feedback?session=design&source=qr"
     static let notes = "Design review — Friday, 14:00\nRoom 3B\nBring your questions."
@@ -55,7 +54,7 @@ enum InterfaceFixture: String, CaseIterable {
             let values = payloads.map(ScannedPayload.init)
             model.receive(ScanOutput(payloads: values, unreadableCount: self == .unreadable ? 1 : 0),
                           generation: model.state.generation)
-            if self == .mixedText { model.selection = values.last?.id }
+            if self == .mixedText || self == .twoResults { model.selection = values.last?.id }
             if self == .openFailure { model.openSelected() }
             if self == .copyFailure { model.copySelected() }
             return model
@@ -68,6 +67,8 @@ enum InterfaceFixture: String, CaseIterable {
             [Self.exampleURL]
         case .multiple, .mixedText:
             [Self.exampleURL, "https://docs.example.org/session/slides", Self.notes]
+        case .twoResults:
+            ["https://example.org/", "hello"]
         case .text, .copyFailure:
             [Self.notes]
         case .empty:
@@ -82,32 +83,5 @@ enum InterfaceFixture: String, CaseIterable {
         default:
             []
         }
-    }
-}
-
-enum InterfaceSettingsFixture: String, CaseIterable {
-    case idle, recording, unavailable, custom
-
-    @MainActor
-    func manager(defaults: UserDefaults) -> HotKeyManager {
-        let client = HotKeyRegistrationClient(installHandler: { _ in true }, register: { shortcut in
-            shortcut.keyCode == UInt32(kVK_Space) ? nil : {}
-        }, removeHandler: {})
-        let manager = HotKeyManager(defaults: defaults, registration: client)
-        manager.start()
-        switch self {
-        case .idle:
-            break
-        case .recording:
-            manager.beginRecording()
-        case .unavailable:
-            manager.beginRecording()
-            manager.update(KeyboardShortcut(keyCode: UInt32(kVK_Space), modifiers: KeyboardShortcut.defaultValue.modifiers,
-                                            keyLabel: "Space"))
-        case .custom:
-            manager.update(KeyboardShortcut(keyCode: UInt32(kVK_ANSI_S), modifiers: KeyboardShortcut.defaultValue.modifiers,
-                                            keyLabel: "S"))
-        }
-        return manager
     }
 }

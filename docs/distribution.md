@@ -29,8 +29,8 @@ Each session identifies `os_version`, `os_build`, `architecture`, `hardware`, an
 Both `arm64` and `x86_64` need a macOS 26 session with every required interaction passing.
 The required check names live in `xtask/src/acceptance.rs`.
 
-Exercise live screen capture, exclusion of QRScanner, permission denial, revocation and recovery, browser opening, clipboard copying, relaunch, shortcut conflict, and connected displays.
-Exercise VoiceOver, keyboard focus and actions, 200% text, Increase Contrast, Reduce Transparency, and both appearances.
+Exercise live screen capture, exclusion of QRScanner, permission denial, revocation and recovery, browser opening, clipboard copying, relaunch, and connected displays.
+Exercise VoiceOver, keyboard focus and actions, system text preferences, Increase Contrast, Reduce Transparency, and both appearances.
 Keep screen images and decoded content out of diagnostic logs.
 A newer macOS observation, a cross-compile, or a Rust proof supplies no macOS 26 acceptance.
 The acceptance file records operator observations rather than proving their empirical truth.
@@ -63,5 +63,6 @@ mise x -- just package --development
 ```
 
 Development packaging creates an ad hoc signed app and archives without release credentials.
+The package command keeps the interactive Apple Development app unchanged.
 The manifest records that the artifact has no notarized distribution status.
 If disk-image creation fails, the command reports failure and preserves the development ZIP and its evidence.

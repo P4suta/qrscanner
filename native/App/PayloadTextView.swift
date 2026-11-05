@@ -4,7 +4,6 @@ import SwiftUI
 struct PayloadTextView: NSViewRepresentable {
     let text: String
     let copyPayload: () -> Void
-    @Environment(\.appTextScale) private var scale
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
@@ -34,7 +33,7 @@ struct PayloadTextView: NSViewRepresentable {
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let value = nsView.documentView as? PayloadTextEditor else { return }
         value.copyPayload = copyPayload
-        value.font = .appFont(.body, scale: scale)
+        value.font = .preferredFont(forTextStyle: .body)
         if value.string != text {
             value.string = text
             value.setSelectedRange(NSRange(location: 0, length: 0))

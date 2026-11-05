@@ -12,7 +12,6 @@ const CHECKS: &[&str] = &[
     "browser",
     "clipboard",
     "relaunch",
-    "shortcut-conflict",
     "multiple-displays",
     "voiceover",
     "keyboard",

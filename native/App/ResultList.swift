@@ -1,29 +1,33 @@
 import SwiftUI
 
 struct ResultList: View {
+    private static let maximumHeight: CGFloat = 196
     let payloads: [ScannedPayload]
     @Binding var selection: String?
-    @Environment(\.appTextScale) private var scale
+    @State private var contentHeight: CGFloat?
 
     var body: some View {
         List(payloads, selection: $selection) { payload in
             HStack(spacing: 10) {
                 Image(systemName: payload.webURL == nil ? "text.alignleft" : "link")
-                    .appFont(.title2).frame(width: 20 * scale).accessibilityHidden(true)
+                    .font(.title2).frame(width: 20).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(payload.host ?? String(localized: "Text")).appFont(.headline)
-                    Text(preview(payload)).appFont(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    Text(payload.host ?? String(localized: "Text")).font(.headline)
+                    Text(preview(payload)).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(minHeight: 49 * scale)
-            .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
             .listRowSeparator(.hidden)
             .tag(payload.id)
         }
         .listStyle(.inset(alternatesRowBackgrounds: false))
         .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, 49 * scale)
+        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+            geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom
+        } action: { _, height in
+            if height.isFinite, height > 0 { contentHeight = height }
+        }
+        .frame(height: min(contentHeight ?? Self.maximumHeight, Self.maximumHeight))
         .accessibilityLabel("QR codes")
     }
 

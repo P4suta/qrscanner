@@ -6,7 +6,6 @@ struct NativeActionButton: NSViewRepresentable {
     let primary: Bool
     let action: () -> Void
     @Environment(\.isEnabled) private var isEnabled
-    @Environment(\.appTextScale) private var scale
 
     init(_ title: LocalizedStringResource, primary: Bool = false, action: @escaping () -> Void) {
         self.title = String(localized: title)
@@ -18,7 +17,7 @@ struct NativeActionButton: NSViewRepresentable {
 
     func makeNSView(context: Context) -> ActionButton {
         let button = ActionButton(title: title, target: context.coordinator, action: #selector(Coordinator.activate))
-        button.bezelStyle = .flexiblePush
+        button.bezelStyle = .rounded
         button.controlSize = .regular
         button.font = .preferredFont(forTextStyle: .body)
         button.focusRingType = .exterior
@@ -31,24 +30,13 @@ struct NativeActionButton: NSViewRepresentable {
     func updateNSView(_ nsView: ActionButton, context: Context) {
         context.coordinator.action = action
         nsView.title = title
-        nsView.controlSize = scale > 1.5 ? .extraLarge : (scale > 1 ? .large : .regular)
-        nsView.font = .appFont(.body, scale: scale)
-        nsView.cell?.wraps = true
-        nsView.cell?.lineBreakMode = .byWordWrapping
         nsView.isEnabled = isEnabled
         nsView.primary = primary
         nsView.setAccessibilityLabel(title)
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ActionButton, context: Context) -> CGSize? {
-        let fitting = nsView.fittingSize
-        let font = nsView.font ?? NSFont.preferredFont(forTextStyle: .body)
-        let width = min(proposal.width ?? fitting.width, fitting.width)
-        let label = NSAttributedString(string: nsView.title, attributes: [.font: font])
-        let inset = max(0, fitting.width - label.size().width)
-        let text = label.boundingRect(with: NSSize(width: max(1, width - inset), height: .greatestFiniteMagnitude),
-                                      options: [.usesLineFragmentOrigin, .usesFontLeading])
-        return CGSize(width: width, height: max(28, ceil(max(text.height, font.ascender - font.descender + font.leading)) + 12))
+        nsView.fittingSize
     }
 
     @MainActor

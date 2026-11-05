@@ -81,7 +81,7 @@ final class AppModelTests: XCTestCase {
         model.cancel()
     }
 
-    func testBusyShortcutDoesNotChangeGeneration() throws {
+    func testBusyScanDoesNotChangeGeneration() throws {
         let model = AppModel(scanner: FixtureScanner(), hasScreenAccess: { true }, defaults: try isolatedDefaults())
         model.scan()
         let generation = model.state.generation

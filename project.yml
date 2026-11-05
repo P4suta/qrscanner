@@ -52,7 +52,6 @@ targets:
     dependencies:
       - sdk: ScreenCaptureKit.framework
       - sdk: Vision.framework
-      - sdk: Carbon.framework
   QRScannerTests:
     type: bundle.unit-test
     platform: macOS

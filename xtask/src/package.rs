@@ -39,7 +39,7 @@ struct SignedCandidate {
     team: String,
 }
 
-fn validate_identity(value: &str) -> bool {
+pub(crate) fn validate_identity(value: &str) -> bool {
     value.len() == CERTIFICATE_SELECTOR_HEX_LENGTH
         && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
@@ -58,7 +58,6 @@ fn valid_submission_id(value: &str) -> bool {
 pub(crate) fn package(inputs: Inputs, toolchain: Option<&str>) -> TaskResult<()> {
     if inputs.development {
         build_native("Release", toolchain)?;
-        crate::copy_app("Release")?;
     } else {
         let receipt = assurance::checked_receipt()?;
         crate::acceptance::check(&receipt.source_sha256, &receipt.binary_sha256)?;
@@ -440,7 +439,7 @@ fn make_dmg(app: &Path, candidate: &Path, development: bool) -> TaskResult<PathB
     }
     fs::write(
         staging.join("Install.txt"),
-        "Drag QRScanner to Applications, then open it.\nUse Scan Screen in the menu bar or press Control-Option-Q.\nScreen Recording permission is requested when you start a scan.\n",
+        "Drag QRScanner to Applications, then open it.\nChoose Scan Screen in the menu bar.\nScreen Recording permission is requested when you start a scan.\n",
     )?;
     run(
         "hdiutil",

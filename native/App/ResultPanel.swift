@@ -4,6 +4,12 @@ import AppKit
 final class ResultPanel: NSPanel {
     weak var model: AppModel?
 
+    static func make(contentRect: NSRect) -> ResultPanel {
+        ResultPanel(contentRect: contentRect,
+                    styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                    backing: .buffered, defer: false)
+    }
+
     override func sendEvent(_ event: NSEvent) {
         let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
         if event.type == .keyDown, flags.isEmpty, event.keyCode == 36 || event.keyCode == 76 {

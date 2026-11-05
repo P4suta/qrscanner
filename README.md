@@ -9,7 +9,7 @@ mise trust
 mise install
 rustup target add --toolchain 1.99.1 aarch64-apple-darwin x86_64-apple-darwin
 cargo fetch --locked
-mise x -- just app
+QRSCANNER_DEVELOPMENT_IDENTITY=YOUR_CERTIFICATE_SELECTOR mise x -- just app
 ```
 
 ## Usage

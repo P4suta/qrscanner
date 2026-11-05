@@ -55,7 +55,7 @@ pub(crate) fn record_command(program: &str, args: &[&str], name: &str) -> TaskRe
 pub(crate) const RELEASE_BINARY: &str =
     "build/xcode/Build/Products/Release/QRScanner.app/Contents/MacOS/QRScanner";
 pub(crate) const RECEIPT: &str = "build/evidence/verification.json";
-const HARNESS_NAMES: [&str; 10] = [
+const HARNESS_NAMES: [&str; 11] = [
     "opening_requires_current_confirmed_web_result",
     "cancellation_rejects_every_late_completion",
     "stale_events_have_no_effect",
@@ -66,6 +66,7 @@ const HARNESS_NAMES: [&str; 10] = [
     "icon_lengths_are_checked",
     "release_receipts_must_match_and_be_accepted",
     "incomplete_verification_cannot_authorize_signing",
+    "verification_artifacts_have_distinct_destinations",
 ];
 
 #[derive(Debug, Deserialize, Serialize)]
