@@ -1,0 +1,13 @@
+name = "QRScanner"
+summary = "Scan QR codes on your Mac screen and open their links in your browser"
+install = """
+mise trust
+mise install
+mise x -- rustup component add rustfmt clippy
+rustup target add --toolchain 1.99.1 aarch64-apple-darwin x86_64-apple-darwin
+cargo fetch --locked
+QRSCANNER_DEVELOPMENT_IDENTITY=YOUR_CERTIFICATE_SELECTOR mise x -- just app"""
+usage = """
+open build/QRScanner.app"""
+copyright = "Yasunobu"
+license = "MIT OR Apache-2.0"

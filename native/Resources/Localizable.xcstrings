@@ -1,0 +1,175 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld QR codes found" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld QR code found"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld QR codes found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "A display image wasn’t available. Make sure the QR code is visible, then try again." : {
+
+    },
+    "Allow Screen Recording" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Close" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Copy Link" : {
+
+    },
+    "Copy Text" : {
+
+    },
+    "Couldn’t copy. Try again or select the text to copy it." : {
+
+    },
+    "Couldn’t open System Settings. Open it from the Apple menu, then enable screen access." : {
+
+    },
+    "Couldn’t open the link. Try again or copy it." : {
+
+    },
+    "Couldn’t read the captured image. Try scanning again." : {
+
+    },
+    "Couldn’t scan your screen" : {
+
+    },
+    "Decoded text" : {
+
+    },
+    "Decoded value" : {
+
+    },
+    "Empty text" : {
+
+    },
+    "Full link" : {
+
+    },
+    "If macOS asks you to reopen the app, choose Quit & Reopen." : {
+
+    },
+    "In System Settings, open Privacy & Security → Screen & System Audio Recording, then enable QRScanner." : {
+
+    },
+    "Link" : {
+
+    },
+    "Looking for QR codes…" : {
+
+    },
+    "Make sure the QR code is visible, then scan your screen." : {
+
+    },
+    "Make sure the entire QR code is visible, then scan again." : {
+
+    },
+    "No QR codes found" : {
+
+    },
+    "No displays are available. Connect or wake a display, then try again." : {
+
+    },
+    "No readable text" : {
+
+    },
+    "Open Link" : {
+
+    },
+    "Open System Settings…" : {
+
+    },
+    "QR Code Content" : {
+
+    },
+    "QR codes" : {
+
+    },
+    "QRScanner" : {
+
+    },
+    "QRScanner needs screen access to read QR codes. Screenshots are processed on your Mac and aren’t saved." : {
+
+    },
+    "Quit QRScanner" : {
+
+    },
+    "Quit QRScanner and open it again to finish granting screen access." : {
+
+    },
+    "Quit and reopen QRScanner to scan again." : {
+
+    },
+    "Relaunch QRScanner" : {
+
+    },
+    "Reopen QRScanner" : {
+
+    },
+    "Scan Again" : {
+
+    },
+    "Scan QR codes on your screen" : {
+
+    },
+    "Scan Screen" : {
+
+    },
+    "Screen access is enabled. Reopen QRScanner to use it." : {
+
+    },
+    "Screen access is ready" : {
+
+    },
+    "Selected link" : {
+
+    },
+    "Show a QR code on any display, then scan to open its link or copy its text." : {
+
+    },
+    "Text" : {
+
+    },
+    "This QR code contains an empty text value." : {
+
+    },
+    "This QR code doesn’t contain readable text. QRScanner can open web links and copy text." : {
+
+    },
+    "Try Again" : {
+
+    },
+    "Try scanning again. If the problem continues, quit and reopen QRScanner." : {
+
+    },
+    "Turn on screen access" : {
+
+    }
+  },
+  "version" : "1.0"
+}
