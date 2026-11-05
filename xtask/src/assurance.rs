@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const SHA256_HEX_LENGTH: usize = 64;
+pub(crate) const RUST_RELEASE: &str = "1.99.1";
 
 const REQUIRED_CHECKS: &[&str] = &[
     "rust-format",
@@ -104,7 +105,7 @@ impl VerificationReceipt {
                 }),
             tools_match: self.tools["rust"]
                 .as_str()
-                .is_some_and(|value| value.contains("rustc 1.99.0"))
+                .is_some_and(|value| value.contains(&format!("rustc {RUST_RELEASE}")))
                 && self.tools["swift"]
                     .as_str()
                     .is_some_and(|value| !value.is_empty())
@@ -385,7 +386,7 @@ mod tests {
                 log_sha256: "a".repeat(64),
             })
             .collect();
-        value.tools = serde_json::json!({"rust": "rustc 1.99.0", "swift": "Swift 6", "sdk": "27.2", "image": "sha256:abc"});
+        value.tools = serde_json::json!({"rust": "rustc 1.99.1", "swift": "Swift 6", "sdk": "27.2", "image": "sha256:abc"});
         value.resources_sha256 = "b".repeat(64);
         value.proofs_sha256 = "c".repeat(64);
         value.mutations_sha256 = "d".repeat(64);

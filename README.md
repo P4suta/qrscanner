@@ -7,7 +7,7 @@ Scan QR codes on your Mac screen and open their links in your browser.
 ```sh
 mise trust
 mise install
-rustup target add --toolchain 1.99.0 aarch64-apple-darwin x86_64-apple-darwin
+rustup target add --toolchain 1.99.1 aarch64-apple-darwin x86_64-apple-darwin
 cargo fetch --locked
 mise x -- just app
 ```

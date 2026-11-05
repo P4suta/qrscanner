@@ -1,4 +1,4 @@
-FROM docker.io/library/rust:1.99.0-bookworm@sha256:114c7a4425406451c2866b6aafe69fe29b1b298832db1277d411ac73c82d04d6
+FROM docker.io/library/rust:1.99.1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
 ENV CARGO_BUILD_JOBS=2
 COPY --from=verification-tools /usr/local/cargo/bin/cargo-kani /usr/local/cargo/bin/cargo-kani
 COPY --from=verification-tools /usr/local/cargo/bin/kani /usr/local/cargo/bin/kani

@@ -632,7 +632,7 @@ fn evidence(
                 {"name": "QRScanner", "SPDXID": "SPDXRef-QRScanner", "versionInfo": env!("CARGO_PKG_VERSION"),
                  "downloadLocation": "NOASSERTION", "filesAnalyzed": false, "licenseDeclared": "MIT OR Apache-2.0",
                  "checksums": [{"algorithm": "SHA256", "checksumValue": digest}]},
-                {"name": "Rust standard library", "SPDXID": "SPDXRef-RustRuntime", "versionInfo": "1.99.0",
+                {"name": "Rust standard library", "SPDXID": "SPDXRef-RustRuntime", "versionInfo": assurance::RUST_RELEASE,
                  "downloadLocation": RUST_DOWNLOAD_ORIGIN, "filesAnalyzed": false, "licenseConcluded": "NOASSERTION"}
             ],
             "relationships": [
