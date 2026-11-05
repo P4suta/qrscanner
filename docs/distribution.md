@@ -11,15 +11,18 @@ mise x -- just prepare-verification
 mise x -- just verify-release
 ```
 
-The release receipt binds the exact source, executable, bundle resources, compiler, SDK, OS, tool image, command logs, proof report, and mutation report.
-Missing checks, duplicate checks, stale command sources, changed resources, and changed verification artifacts fail validation.
+The release receipt binds the exact source, executable, bundle resources, compiler, SDK, OS, tool image, command logs, proof report, mutation report, and fuzz report.
+Missing checks, duplicate checks, stale command sources, changed or missing logs, altered command records, changed resources, and changed verification artifacts fail validation.
 Changing the source or Release executable invalidates prior evidence.
 Verification never signs or publishes as a side effect.
-Mutation testing covers every runtime source file in the Rust core and C foreign-interface crates.
-The complete Kani inventory and negative control check proof harness modules.
+Mutation testing covers every runtime source file in the Rust scan, C foreign-interface, and verification-policy crates.
+The complete Kani inventory and production fault controls check proof harness sensitivity.
 Unit-test mutation coverage excludes code compiled only for Kani.
 The gate requires a successful baseline, a complete matching mutation inventory, caught executable mutants, and no survivors or timeouts.
 The report identifies unbuildable mutants and caught mutants as distinct outcomes.
+The fixed parser fuzz campaign must complete its declared run count after corpus replay.
+The fuzz runtime's `NCSA` license allowance applies only to the pinned `libfuzzer-sys` tool dependency.
+The app doesn't link the fuzz runtime.
 
 ## Native acceptance
 
@@ -35,6 +38,8 @@ Keep screen images and decoded content out of diagnostic logs.
 A newer macOS observation, a cross-compile, or a Rust proof supplies no macOS 26 acceptance.
 The acceptance file records operator observations rather than proving their empirical truth.
 Tests exercise the parser's refusal of missing, failing, stale, or wrong-OS records.
+OS versions need numeric minor and optional patch components after `26.`.
+Blank build and hardware fields fail validation.
 
 ## Authorized signing
 

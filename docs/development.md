@@ -32,6 +32,7 @@ Owner-only document generation and PR preparation remain separate from contribut
 Use `dotfiles repository check` for the generated README and licenses when the owner tool is available.
 
 The native runner compiles production adapters, views, AppDelegate, and tests with Swift 6 strict concurrency and warnings as errors.
+It prohibits app activation and renders fixture windows offscreen.
 Known-answer QR images and a blank image exercise Vision.
 The UI tests inspect actual selectable text, standard window controls, button geometry, focus behavior, and light and dark renderings.
 Narrow-window tests keep action buttons within a 320-point content area.
@@ -55,15 +56,21 @@ A checkout-specific Docker volume keeps Linux compiler caches apart from native 
 A safety stop is inconclusive and creates no passing receipt.
 
 The release gate runs fast checks, a Universal Release build, and optimized native tests on both architectures.
-It runs every declared Kani harness, the rejecting automatic-open control, and the full core and foreign-interface mutation inventory.
+It repeats the native suites with AddressSanitizer and ThreadSanitizer instrumentation.
+It runs every declared Kani harness, the rejecting automatic-open assertion, seven production fault controls, and the full scan, foreign-interface, and verification-policy mutation inventory.
+It also replays the committed parser corpus and runs a fixed libFuzzer campaign in the bounded container.
 An Apple silicon Mac executes the Intel runner through Rosetta.
 The Intel runner records execution of Intel code without claiming physical Intel hardware acceptance.
 Use `just proofs` or `just mutants` for the same bounded campaigns on demand.
+Use `mise x -- just mutation-plan` to inspect the complete selected mutation inventory without running mutations.
+Use `mise x -- just fuzz` for the same parser campaign on demand.
 The source must remain unchanged throughout release verification.
 
-Successful automated verification writes `build/evidence/verification.json` with source, executable, resource, command-log, proof, mutation, toolchain, SDK, OS, and container identities.
+Successful automated verification writes `build/evidence/verification.json` with source, executable, resource, command-log, proof, mutation, fuzz, toolchain, SDK, OS, and container identities.
 Fast checks create no release receipt.
+Receipt consumption rehashes the required command logs and compares their saved command records.
 Signing additionally requires the login-session acceptance described in [Distribution](distribution.md).
+The [assurance contract](design/native-interface-assurance.md) identifies proof domains, finite bounds, instrumentation, and external assumptions.
 The pinned RustSec revision makes contributor checks reproducible.
 The signing path also runs an online advisory audit for current freshness.
 

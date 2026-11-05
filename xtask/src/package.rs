@@ -1,6 +1,6 @@
 use crate::assurance::{self, RELEASE_BINARY};
-use crate::release_rules::{NextStep, NotaryState, next_step};
 use crate::{TaskResult, build_native, cargo, run};
+use qrscanner_verification::{NextStep, NotaryState, next_step};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::fs;

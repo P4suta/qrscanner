@@ -1,4 +1,5 @@
 use crate::TaskResult;
+use qrscanner_verification::{AcceptanceFacts, MacOS26, acceptance_complete};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
@@ -44,21 +45,23 @@ impl NativeAcceptance {
         if self.source_sha256 != source || self.binary_sha256 != binary {
             return Err("macOS 26 acceptance belongs to a different source or binary".into());
         }
-        for architecture in ["arm64", "x86_64"] {
-            if !self.sessions.iter().any(|session| {
+        let session_accepted = |architecture| {
+            self.sessions.iter().any(|session| {
                 session.architecture == architecture
-                    && session.os_version.starts_with("26.")
-                    && !session.os_build.is_empty()
-                    && !session.hardware.is_empty()
+                    && MacOS26::parse(session.os_version.as_bytes()).is_some()
+                    && !session.os_build.trim().is_empty()
+                    && !session.hardware.trim().is_empty()
                     && CHECKS
                         .iter()
                         .all(|name| session.checks.get(*name) == Some(&true))
-            }) {
-                return Err(format!(
-                    "macOS 26 login-session acceptance is incomplete for {architecture}"
-                )
-                .into());
-            }
+            })
+        };
+        if !acceptance_complete(AcceptanceFacts {
+            identities_match: self.source_sha256 == source && self.binary_sha256 == binary,
+            arm64_session: session_accepted("arm64"),
+            x86_64_session: session_accepted("x86_64"),
+        }) {
+            return Err("macOS 26 login-session acceptance requires both architectures and every interaction".into());
         }
         Ok(())
     }
@@ -113,6 +116,39 @@ mod tests {
             assert!(value.validate("source", "binary").is_err());
             value.sessions[0].checks.insert((*name).to_owned(), false);
             assert!(value.validate("source", "binary").is_err());
+        }
+    }
+
+    #[test]
+    fn malformed_os_versions_and_blank_metadata_are_refused() {
+        for version in [
+            "26.",
+            "26.invalid",
+            "26.0.",
+            "26.0.1.2",
+            "26.0\n",
+            "26..1",
+            "26.０",
+        ] {
+            let mut value = accepted();
+            value.sessions[0].os_version = version.to_owned();
+            assert!(
+                value.validate("source", "binary").is_err(),
+                "accepted {version:?}"
+            );
+        }
+        for blank in ["", " ", "\t\n"] {
+            let mut value = accepted();
+            value.sessions[0].os_build = blank.to_owned();
+            assert!(value.validate("source", "binary").is_err());
+            let mut value = accepted();
+            value.sessions[0].hardware = blank.to_owned();
+            assert!(value.validate("source", "binary").is_err());
+        }
+        for version in ["26.0", "26.1", "26.0.1", "26.12.34"] {
+            let mut value = accepted();
+            value.sessions[0].os_version = version.to_owned();
+            assert!(value.validate("source", "binary").is_ok());
         }
     }
 }

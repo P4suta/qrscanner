@@ -24,5 +24,11 @@ proofs:
 mutants:
     cargo run --offline --locked -p xtask -- mutants
 
+mutation-plan:
+    cargo run --offline --locked -p xtask -- mutation-plan
+
+fuzz:
+    cargo run --offline --locked -p xtask -- fuzz
+
 package *args:
     cargo run --offline --locked -p xtask -- package {{ args }}

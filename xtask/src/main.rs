@@ -6,11 +6,12 @@ use std::process::{Command, Output};
 mod acceptance;
 mod assurance;
 mod bundle;
+mod fuzzing;
 mod icon;
 mod local_app;
 mod localization;
 mod package;
-mod release_rules;
+mod proof_controls;
 mod verification;
 
 type TaskResult<T> = Result<T, Box<dyn Error>>;
@@ -68,14 +69,18 @@ fn execute() -> TaskResult<()> {
             Ok(())
         }
         Some("check") => check(toolchain.as_deref()),
-        Some("test-native") => native_tests(false, true),
+        Some("test-native") => native_tests(false, true, Instrumentation::Plain),
         Some("localize") => { build_native("Debug", toolchain.as_deref())?; localization::sync(false) },
         Some("check-localization") => localization::sync(true),
         Some("prepare-verification") => verification::prepare(args.get(1).map(String::as_str)),
         Some("proofs") => verification::bounded(verification::Campaign::Proofs),
         Some("mutants") => verification::bounded(verification::Campaign::Mutations),
+        Some("mutation-plan") => verification::bounded(verification::Campaign::MutationPlan),
+        Some("fuzz") => verification::bounded(verification::Campaign::Fuzz),
         Some("proofs-inner") => assurance::prove(None),
         Some("mutants-inner") => verification::mutations(),
+        Some("mutation-plan-inner") => verification::mutation_plan(),
+        Some("fuzz-inner") => fuzzing::run_campaign(),
         Some("verify-release") => verify_release(toolchain.as_deref()),
         Some("package") => {
             let development = match args.get(1).map(String::as_str) {
@@ -282,7 +287,7 @@ fn check(toolchain: Option<&str>) -> TaskResult<()> {
         )?;
         build_native("Debug", toolchain)?;
         localization::sync(true)?;
-        native_tests(false, false)?;
+        native_tests(false, false, Instrumentation::Plain)?;
         local_app::stage("Debug", local_app::Artifact::Verification, "-")?;
     }
     if interactive != local_app::interactive_fingerprint()? {
@@ -348,9 +353,16 @@ fn verify_release(toolchain: Option<&str>) -> TaskResult<()> {
         Path::new("build/xcode/Build/Products/Release/QRScanner.app"),
         false,
     )?;
-    native_tests(true, true)?;
+    for instrumentation in [
+        Instrumentation::Plain,
+        Instrumentation::Address,
+        Instrumentation::Thread,
+    ] {
+        native_tests(true, true, instrumentation)?;
+    }
     verification::bounded(verification::Campaign::Proofs)?;
     verification::bounded(verification::Campaign::Mutations)?;
+    verification::bounded(verification::Campaign::Fuzz)?;
     if source != assurance::source_digest(Path::new("."))? {
         return Err("Source changed during release verification; no receipt was issued".into());
     }
@@ -359,7 +371,18 @@ fn verify_release(toolchain: Option<&str>) -> TaskResult<()> {
     Ok(())
 }
 
-fn native_tests(release: bool, all_architectures: bool) -> TaskResult<()> {
+#[derive(Clone, Copy)]
+enum Instrumentation {
+    Plain,
+    Address,
+    Thread,
+}
+
+fn native_tests(
+    release: bool,
+    all_architectures: bool,
+    instrumentation: Instrumentation,
+) -> TaskResult<()> {
     let developer = run("xcode-select", &["-p"], "developer-directory")?;
     let frameworks = format!(
         "{}/Platforms/MacOSX.platform/Developer/Library/Frameworks",
@@ -400,7 +423,17 @@ fn native_tests(release: bool, all_architectures: bool) -> TaskResult<()> {
             continue;
         }
         let target = format!("{architecture}-apple-macos26.0");
-        let mode = if release { "release" } else { "debug" };
+        let mode = match instrumentation {
+            Instrumentation::Plain => {
+                if release {
+                    "release"
+                } else {
+                    "debug"
+                }
+            }
+            Instrumentation::Address => "address",
+            Instrumentation::Thread => "thread",
+        };
         let executable = format!("build/native-tests-{mode}-{architecture}");
         let mut args = vec![
             "swiftc",
@@ -446,6 +479,19 @@ fn native_tests(release: bool, all_architectures: bool) -> TaskResult<()> {
         if release {
             args.push("-O");
         }
+        match instrumentation {
+            Instrumentation::Plain => {}
+            Instrumentation::Address => args.extend(["-g", "-sanitize=address"]),
+            Instrumentation::Thread => args.extend(["-g", "-sanitize=thread"]),
+        }
+        let environment: &[(&str, &str)] = match instrumentation {
+            Instrumentation::Plain => &[],
+            Instrumentation::Address => &[(
+                "ASAN_OPTIONS",
+                "halt_on_error=1:abort_on_error=1:detect_leaks=0",
+            )],
+            Instrumentation::Thread => &[("TSAN_OPTIONS", "halt_on_error=1:exitcode=66")],
+        };
         if let Err(error) = run(
             "xcrun",
             &args,
@@ -454,7 +500,7 @@ fn native_tests(release: bool, all_architectures: bool) -> TaskResult<()> {
             failures.push(error.to_string());
             continue;
         }
-        if let Err(error) = run(
+        if let Err(error) = run_with_environment(
             "arch",
             &[
                 &format!("-{architecture}"),
@@ -465,6 +511,7 @@ fn native_tests(release: bool, all_architectures: bool) -> TaskResult<()> {
                 ),
             ],
             &format!("native-tests-{mode}-{architecture}"),
+            environment,
         ) {
             failures.push(error.to_string());
         }

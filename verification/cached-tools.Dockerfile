@@ -6,8 +6,10 @@ COPY --from=verification-tools /usr/local/cargo/bin/cargo-mutants /usr/local/car
 COPY --from=verification-tools /root/.kani /root/.kani
 COPY --from=verification-tools /usr/local/rustup/toolchains/nightly-2026-08-21-x86_64-unknown-linux-gnu /usr/local/rustup/toolchains/nightly-2026-08-21-x86_64-unknown-linux-gnu
 RUN cargo kani --version && cargo mutants --version
+RUN cargo install --locked cargo-fuzz --version 0.13.1
 WORKDIR /source
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+COPY fuzz ./fuzz
 COPY xtask ./xtask
 RUN cargo fetch --locked
