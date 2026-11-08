@@ -15,39 +15,32 @@ concurrency:
 jobs:
   proposal:
     name: Prepare release proposal
-    if: github.ref == 'refs/heads/main' && vars.RELEASE_PROPOSALS_ENABLED == 'true'
+    if: >-
+      github.repository_id == '1446573289' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      vars.RELEASE_PROPOSALS_ENABLED == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: release-please
     permissions:
       contents: read
-      id-token: write # Authenticate to the proposal-only Doppler identity.
+    env:
+      APP_INPUTS_VALID: >-
+        ${{ secrets.RELEASE_APP_CLIENT_ID != '' &&
+        !startsWith(secrets.RELEASE_APP_CLIENT_ID, '${') &&
+        secrets.RELEASE_APP_PRIVATE_KEY != '' &&
+        !startsWith(secrets.RELEASE_APP_PRIVATE_KEY, '${') }}
     steps:
-      - name: Fetch proposal credentials
-        id: credentials
-        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534
-        with:
-          auth-method: oidc
-          doppler-identity-id: ${{ vars.DOPPLER_AUTOMATION_IDENTITY_ID }}
-          doppler-project: qrscanner
-          doppler-config: automation
-          inject-env-vars: false
       - name: Require proposal credentials
-        env:
-          APP_CLIENT_ID: ${{ steps.credentials.outputs.GITHUB_APP_CLIENT_ID }}
-          APP_PRIVATE_KEY: ${{ steps.credentials.outputs.GITHUB_APP_PRIVATE_KEY }}
-        run: |
-          test -n "$APP_CLIENT_ID"
-          test -n "$APP_PRIVATE_KEY"
-          case "$APP_CLIENT_ID$APP_PRIVATE_KEY" in
-            *\$\{*) exit 1 ;;
-          esac
+        if: env.APP_INPUTS_VALID != 'true'
+        run: exit 1
       - name: Create repository token
         id: app
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
-          client-id: ${{ steps.credentials.outputs.GITHUB_APP_CLIENT_ID }}
-          private-key: ${{ steps.credentials.outputs.GITHUB_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
