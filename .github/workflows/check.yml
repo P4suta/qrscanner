@@ -23,7 +23,7 @@ jobs:
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
         with:
           install: false
-          version: 2026.10.24
+          version: 2026.11.2
           cache_key: qrscanner-mise-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'Cargo.lock') }}
           cache_save_post: true
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
