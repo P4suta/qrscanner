@@ -20,7 +20,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       vars.RELEASE_PROPOSALS_ENABLED == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     environment: release-please
     permissions:
