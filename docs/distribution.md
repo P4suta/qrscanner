@@ -64,9 +64,9 @@ Publishing remains a separate owner-authorized operation.
 ## Version proposals
 
 The release-please workflow maintains a version and changelog PR from Conventional Commits on `main`.
-It uses the existing release-please GitHub App through the `qrscanner` Doppler project's `automation` config.
+It uses the existing release-please GitHub App through named environment secrets synchronized from a purpose-specific Doppler config.
 The `release-please` GitHub environment permits only `main` and has no reviewer gate for automatic proposals.
-Its repository variable `DOPPLER_AUTOMATION_IDENTITY_ID` identifies the matching read-only Doppler identity.
+The [credential guide](credential-delivery.md) defines delivery, rotation, and read-only verification.
 Run the read-only `Verify release credentials` workflow before setting `RELEASE_PROPOSALS_ENABLED` to `true`.
 The proposal workflow never creates tags or GitHub Releases.
 Merging a proposal doesn't sign or publish an artifact.
