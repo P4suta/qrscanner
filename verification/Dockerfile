@@ -1,4 +1,4 @@
-FROM docker.io/library/rust:1.99.1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8fd4c5e80d7735607c3
+FROM docker.io/library/rust:1.99.1-bookworm@sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c
 ENV CARGO_BUILD_JOBS=2
 RUN cargo install --locked kani-verifier --version 0.68.0 \
     && cargo kani setup \
