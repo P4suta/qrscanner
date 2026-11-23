@@ -106,7 +106,7 @@ fn recipe_digest() -> TaskResult<String> {
     ] {
         input.extend_from_slice(&fs::read(path)?);
     }
-    Ok(format!("{:x}", sha2::Sha256::digest(input)))
+    Ok(hex::encode(sha2::Sha256::digest(input)))
 }
 
 pub(crate) fn image() -> TaskResult<String> {
@@ -143,8 +143,8 @@ pub(crate) fn bounded(campaign: Campaign) -> TaskResult<()> {
     let root = std::env::current_dir()?;
     let output_root = root.join("build/verification");
     let target = format!(
-        "qrscanner-verification-{:x}",
-        sha2::Sha256::digest(root.as_os_str().as_encoded_bytes())
+        "qrscanner-verification-{}",
+        hex::encode(sha2::Sha256::digest(root.as_os_str().as_encoded_bytes()))
     );
     fs::create_dir_all(&output_root)?;
     let source_mount = format!("{}:/source:ro", root.display());
