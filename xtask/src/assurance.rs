@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const SHA256_HEX_LENGTH: usize = 64;
-pub(crate) const RUST_RELEASE: &str = "1.99.1";
+pub(crate) const RUST_RELEASE: &str = "1.100.0";
 
 const REQUIRED_CHECKS: &[&str] = &[
     "workflow-lint",
@@ -183,7 +183,7 @@ impl VerificationReceipt {
 }
 
 pub(crate) fn hash_file(path: impl AsRef<Path>) -> TaskResult<String> {
-    Ok(format!("{:x}", Sha256::digest(fs::read(path)?)))
+    Ok(hex::encode(Sha256::digest(fs::read(path)?)))
 }
 
 fn source_files(root: &Path, relative: &Path, files: &mut Vec<PathBuf>) -> TaskResult<()> {
@@ -231,7 +231,7 @@ pub(crate) fn source_digest(root: &Path) -> TaskResult<String> {
         hash.update(u64::try_from(bytes.len())?.to_be_bytes());
         hash.update(bytes);
     }
-    Ok(format!("{:x}", hash.finalize()))
+    Ok(hex::encode(hash.finalize()))
 }
 
 pub(crate) fn save_receipt() -> TaskResult<()> {
@@ -498,7 +498,7 @@ mod tests {
                 log_sha256: "a".repeat(64),
             })
             .collect();
-        value.tools = serde_json::json!({"rust": "rustc 1.99.1", "swift": "Swift 6", "sdk": "27.2", "image": "sha256:abc"});
+        value.tools = serde_json::json!({"rust": format!("rustc {RUST_RELEASE}"), "swift": "Swift 6", "sdk": "27.2", "image": "sha256:abc"});
         value.resources_sha256 = "b".repeat(64);
         value.proofs_sha256 = "c".repeat(64);
         value.mutations_sha256 = "d".repeat(64);
